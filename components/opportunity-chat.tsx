@@ -24,14 +24,14 @@ import {
   ChatMessage,
   OpportunityAiClient,
   SourceReference,
-  createMockOpportunityAiClient,
+  createOpportunityAiClient,
 } from '@/lib/opportunity-ai-client'
 
 export interface OpportunityChatProps {
   opportunityId: string
   apiUrl: string
+  apiKey: string
   opportunityName?: string
-  token?: string
 }
 
 type VoiceState = 'idle' | 'recording' | 'processing' | 'speaking'
@@ -46,7 +46,7 @@ const suggestions = [
   'How do I apply?',
 ]
 
-export function OpportunityChat({ opportunityId, apiUrl, opportunityName = 'European Innovation Funding Programme' }: OpportunityChatProps) {
+export function OpportunityChat({ opportunityId, apiUrl, apiKey, opportunityName = 'European Innovation Funding Programme' }: OpportunityChatProps) {
   const [panelState, setPanelState] = useState<PanelState>('closed')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -55,7 +55,7 @@ export function OpportunityChat({ opportunityId, apiUrl, opportunityName = 'Euro
   const [voiceState, setVoiceState] = useState<VoiceState>('idle')
   const [voiceSeconds, setVoiceSeconds] = useState(0)
   const [error, setError] = useState(false)
-  const clientRef = useRef<OpportunityAiClient>(createMockOpportunityAiClient(apiUrl))
+  const clientRef = useRef<OpportunityAiClient>(createOpportunityAiClient(apiUrl, apiKey))
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 

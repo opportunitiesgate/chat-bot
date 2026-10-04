@@ -6,6 +6,7 @@ export default function Home() {
       <OpportunityChat
         opportunityId="opp_123"
         apiUrl="https://ai-chat.opportunitiesgate.net"
+        apiKey="demo-api-key"
       />
     </main>
   )

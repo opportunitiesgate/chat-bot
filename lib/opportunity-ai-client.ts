@@ -32,21 +32,35 @@ const openingMessage: ChatMessage = {
   createdAt: new Date().toISOString(),
 }
 
+export function createOpportunityAiClient(apiUrl: string, apiKey: string): OpportunityAiClient {
+  const baseUrl = apiUrl.replace(/\/$/, '')
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}`, 'X-API-Key': apiKey }
+
+  return {
+    async getConversation(opportunityId) {
+      const response = await fetch(`${baseUrl}/opportunities/${encodeURIComponent(opportunityId)}/conversation`, { headers })
+      if (!response.ok) throw new Error(`Conversation request failed (${response.status})`)
+      const data = await response.json()
+      return Array.isArray(data) ? data : data.messages ?? []
+    },
+    async sendMessage(opportunityId, message) {
+      const response = await fetch(`${baseUrl}/opportunities/${encodeURIComponent(opportunityId)}/messages`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ message }),
+      })
+      if (!response.ok) throw new Error(`Message request failed (${response.status})`)
+      return response.json()
+    },
+  }
+} 
+
 export function createMockOpportunityAiClient(_apiUrl: string): OpportunityAiClient {
   return {
-    async getConversation(_opportunityId) {
-      await wait(450)
-      return [openingMessage]
-    },
+    async getConversation(_opportunityId) { await wait(450); return [openingMessage] },
     async sendMessage(_opportunityId, message) {
       await wait(1100)
-      return {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: responseFor(message),
-        createdAt: new Date().toISOString(),
-        sources: sourceReferences,
-      }
+      return { id: `assistant-${Date.now()}`, role: 'assistant', content: responseFor(message), createdAt: new Date().toISOString(), sources: sourceReferences }
     },
   }
 }
