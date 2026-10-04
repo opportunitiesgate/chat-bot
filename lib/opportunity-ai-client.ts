@@ -14,6 +14,7 @@ export interface ChatMessage {
 }
 
 export interface OpportunityAiClient {
+  readonly socketUrl: string
   sendMessage(opportunityId: string, message: string): Promise<ChatMessage>
   getConversation(opportunityId: string): Promise<ChatMessage[]>
 }
@@ -32,11 +33,12 @@ const openingMessage: ChatMessage = {
   createdAt: new Date().toISOString(),
 }
 
-export function createOpportunityAiClient(apiUrl: string, apiKey: string): OpportunityAiClient {
+export function createOpportunityAiClient(apiUrl: string, apiKey: string, socketUrl: string): OpportunityAiClient {
   const baseUrl = apiUrl.replace(/\/$/, '')
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}`, 'X-API-Key': apiKey }
 
   return {
+    socketUrl,
     async getConversation(opportunityId) {
       const response = await fetch(`${baseUrl}/opportunities/${encodeURIComponent(opportunityId)}/conversation`, { headers })
       if (!response.ok) throw new Error(`Conversation request failed (${response.status})`)
@@ -55,8 +57,9 @@ export function createOpportunityAiClient(apiUrl: string, apiKey: string): Oppor
   }
 } 
 
-export function createMockOpportunityAiClient(_apiUrl: string): OpportunityAiClient {
+export function createMockOpportunityAiClient(_apiUrl: string, socketUrl = ''): OpportunityAiClient {
   return {
+    socketUrl,
     async getConversation(_opportunityId) { await wait(450); return [openingMessage] },
     async sendMessage(_opportunityId, message) {
       await wait(1100)

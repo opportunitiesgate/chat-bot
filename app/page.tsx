@@ -7,6 +7,7 @@ export default function Home() {
         opportunityId="opp_123"
         apiUrl="https://ai-chat.opportunitiesgate.net"
         apiKey="demo-api-key"
+        socketUrl="wss://ai-chat.opportunitiesgate.net/ws"
       />
     </main>
   )
