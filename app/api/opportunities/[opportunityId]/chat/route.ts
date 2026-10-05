@@ -23,6 +23,9 @@ export async function POST(
   }
   const body = await request.json().catch(() => null)
   const message = typeof body?.message === 'string' ? body.message.trim() : ''
+  // The interface language (e.g. "fr"), forwarded as Accept-Language: the RAG server answers in the
+  // question's language and falls back to this one when that is unclear.
+  const language = typeof body?.language === 'string' && /^[a-z]{2,3}$/.test(body.language) ? body.language : null
 
   if (!message) return NextResponse.json({ error: 'Message is required.' }, { status: 400 })
 
@@ -34,7 +37,11 @@ export async function POST(
   try {
     response = await fetch(`${apiUrl.replace(/\/$/, '')}/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey,
+        ...(language ? { 'Accept-Language': language } : {}),
+      },
       body: JSON.stringify({ opportunityId, message }),
       signal: AbortSignal.timeout(AI_TIMEOUT_MS),
       cache: 'no-store',
