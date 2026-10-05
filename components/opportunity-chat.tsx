@@ -23,6 +23,8 @@ import {
 import {
   ChatMessage,
   OpportunityAiClient,
+  VoiceEvent,
+  VoiceSessionState,
   createOpportunityAiClient,
 } from '@/lib/opportunity-ai-client'
 import type { SourceReference } from '@/lib/opportunity-ai-client'
@@ -30,7 +32,6 @@ import type { SourceReference } from '@/lib/opportunity-ai-client'
 export interface OpportunityChatProps {
   opportunityId: string
   apiUrl: string
-  apiKey: string
   socketUrl: string
   opportunityName?: string
 }
@@ -47,7 +48,7 @@ const suggestions = [
   'How do I apply?',
 ]
 
-export function OpportunityChat({ opportunityId, apiUrl, apiKey, socketUrl, opportunityName = 'European Innovation Funding Programme' }: OpportunityChatProps) {
+export function OpportunityChat({ opportunityId, apiUrl, socketUrl, opportunityName = 'European Innovation Funding Programme' }: OpportunityChatProps) {
   const [panelState, setPanelState] = useState<PanelState>('closed')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -55,8 +56,11 @@ export function OpportunityChat({ opportunityId, apiUrl, apiKey, socketUrl, oppo
   const [isStreaming, setIsStreaming] = useState(false)
   const [voiceState, setVoiceState] = useState<VoiceState>('idle')
   const [voiceSeconds, setVoiceSeconds] = useState(0)
+  const [voiceSession, setVoiceSession] = useState<VoiceSessionState>('idle')
+  const [queuePosition, setQueuePosition] = useState<number | null>(null)
   const [error, setError] = useState(false)
-  const clientRef = useRef<OpportunityAiClient>(createOpportunityAiClient(apiUrl, apiKey, socketUrl))
+  const clientRef = useRef<OpportunityAiClient>(createOpportunityAiClient(apiUrl, socketUrl))
+  const voiceTransportRef = useRef<ReturnType<OpportunityAiClient['createVoiceTransport']> | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -75,6 +79,8 @@ export function OpportunityChat({ opportunityId, apiUrl, apiKey, socketUrl, oppo
     const timer = window.setInterval(() => setVoiceSeconds((seconds) => seconds + 1), 1000)
     return () => window.clearInterval(timer)
   }, [voiceState])
+
+  useEffect(() => () => voiceTransportRef.current?.close(), [])
 
   function openPanel() {
     setPanelState('open')
@@ -104,22 +110,25 @@ export function OpportunityChat({ opportunityId, apiUrl, apiKey, socketUrl, oppo
     void sendMessage()
   }
 
+  function handleVoiceEvent(event: VoiceEvent) {
+    if (event.type === 'session.queued') { setVoiceSession('queued'); setQueuePosition(event.position) }
+    if (event.type === 'session.queue_position') setQueuePosition(event.position)
+    if (event.type === 'session.started') { setVoiceSession('active'); setQueuePosition(null) }
+    if (event.type === 'session.timeout' || event.type === 'error') { setVoiceSession(event.type === 'error' ? 'error' : 'timeout'); setError(true); voiceTransportRef.current?.close(); setVoiceState('idle') }
+  }
+
   function toggleRecording() {
-    if (voiceState === 'recording') {
-      setVoiceState('processing')
-      window.setTimeout(() => {
-        setVoiceState('idle')
-        setInput('What are the key requirements for this opportunity?')
-        inputRef.current?.focus()
-      }, 1200)
+    if (voiceState === 'recording' || voiceSession === 'active' || voiceSession === 'queued' || voiceSession === 'connecting') {
+      voiceTransportRef.current?.sendSessionEnd()
+      voiceTransportRef.current?.close()
+      voiceTransportRef.current = null
+      setVoiceSession('closed'); setVoiceState('idle'); setQueuePosition(null)
       return
     }
-    if (voiceState === 'speaking') {
-      setVoiceState('idle')
-      return
-    }
-    setVoiceSeconds(0)
-    setVoiceState('recording')
+    setVoiceSeconds(0); setVoiceState('recording'); setVoiceSession('connecting'); setError(false)
+    const transport = clientRef.current.createVoiceTransport()
+    voiceTransportRef.current = transport
+    transport.connect(opportunityId, { onEvent: handleVoiceEvent, onClose: () => { setVoiceSession('closed'); setVoiceState('idle') }, onError: () => { setVoiceSession('error'); setError(true); setVoiceState('idle') } })
   }
 
   const isVisible = panelState !== 'closed'
