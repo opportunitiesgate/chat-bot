@@ -1,12 +1,11 @@
-import { OpportunityChat } from '@/components/opportunity-chat'
-
+// The assistant is only used embedded in OpportunitiesGate opportunity pages (/embed/[opportunityId]),
+// which pass a signed token proving the viewer may see that opportunity's details.
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#F6EFE8]">
-      <OpportunityChat
-        opportunityId="6ab6e65f09c96c7c70d3a3b5"
-        socketUrl={process.env.NEXT_PUBLIC_AI_VOICE_SOCKET_URL ?? 'wss://ai-chat.opportunitiesgate.net/ws/voice'}
-      />
+    <main className="flex min-h-screen items-center justify-center bg-[#F6EFE8] p-6">
+      <p className="max-w-md text-center text-sm text-[#164642]">
+        The Opportunity Assistant is available on OpportunitiesGate opportunity pages.
+      </p>
     </main>
   )
 }

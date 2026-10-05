@@ -22,20 +22,21 @@ export interface OpportunityAiClient {
   createVoiceConversation(opportunityId: string, handlers: VoiceHandlers): VoiceConversation
 }
 
-export function createOpportunityAiClient(socketUrl: string): OpportunityAiClient {
+export function createOpportunityAiClient(socketUrl: string, embedToken?: string): OpportunityAiClient {
+  const authHeaders: Record<string, string> = embedToken ? { 'X-Embed-Token': embedToken } : {}
   return {
     // The AI server keeps no conversation history, so a conversation starts with the opening message.
     async getConversation() {
       return [createOpeningMessage()]
     },
     async sendMessage(opportunityId, message) {
-      const response = await fetch(`/api/opportunities/${encodeURIComponent(opportunityId)}/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) })
+      const response = await fetch(`/api/opportunities/${encodeURIComponent(opportunityId)}/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders }, body: JSON.stringify({ message }) })
       const data = await response.json().catch(() => null)
       if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : `Message request failed (${response.status})`)
       if (!isChatMessage(data)) throw new Error('The assistant returned an invalid response.')
       return { ...data, source: 'text' }
     },
-    createVoiceConversation: (opportunityId, handlers) => new VoiceConversation(socketUrl, opportunityId, handlers),
+    createVoiceConversation: (opportunityId, handlers) => new VoiceConversation(socketUrl, opportunityId, handlers, authHeaders),
   }
 }
 

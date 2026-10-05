@@ -162,3 +162,9 @@
     font-family: Arial, Helvetica, sans-serif;
   }
 }
+
+/* /embed renders inside an iframe over the host page: let the host page show through. */
+html:has([data-embedded-assistant]),
+body:has(> [data-embedded-assistant]) {
+  background-color: transparent;
+}
