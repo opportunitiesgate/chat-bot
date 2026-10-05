@@ -90,7 +90,7 @@ export function OpportunityChat({ opportunityId, apiUrl, socketUrl, opportunityN
   async function sendMessage(message = input) {
     const trimmed = message.trim()
     if (!trimmed || isStreaming || voiceState !== 'idle') return
-    const userMessage: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: trimmed, createdAt: new Date().toISOString() }
+    const userMessage: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: trimmed, createdAt: new Date().toISOString(), source: 'text' }
     setMessages((current) => [...current, userMessage])
     setInput('')
     setError(false)
@@ -188,7 +188,5 @@ function LoadingMessages() { return <div className="space-y-4"><div className="h
 function ErrorMessage({ onRetry }: { onRetry: () => void }) { return <div className="mt-5 rounded-2xl border border-[#E9601F]/25 bg-[#fff4ed] p-4"><p className="text-sm font-semibold text-[#164642]">Something went wrong.</p><p className="mt-1 text-xs text-[#6D7775]">I couldn’t retrieve an answer right now.</p><button onClick={onRetry} className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-[#E9601F] hover:underline"><RotateCcw className="size-3.5" /> Try again</button></div> }
 
 function VoiceStatus({ state, seconds, onAction }: { state: VoiceState; seconds: number; onAction: () => void }) { const labels: Record<Exclude<VoiceState, 'idle'>, string> = { recording: 'Listening...', processing: 'Processing...', speaking: 'Assistant is speaking...' }; return <div className="shrink-0 border-t border-[#164642]/10 bg-[#F6EFE8] px-4 py-3"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2.5 text-sm font-medium text-[#164642]">{state === 'recording' && <span className="flex size-7 items-center justify-center rounded-full bg-[#E9601F] text-white"><Mic className="size-3.5" /></span>}{state === 'processing' && <Loader2 className="size-4 animate-spin text-[#E9601F]" />}{state === 'speaking' && <Volume2 className="size-4 text-[#E9601F]" />}<span>{labels[state as Exclude<VoiceState, 'idle'>]}</span>{state === 'recording' && <span className="font-mono text-xs text-[#6D7775]">00:{String(seconds).padStart(2, '0')}</span>}</div><button onClick={onAction} aria-label={state === 'recording' ? 'Stop and process recording' : 'Stop voice interaction'} className="flex size-8 items-center justify-center rounded-lg border border-[#164642]/15 bg-white text-[#164642] hover:bg-[#FFFAF6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#97C1FD]">{state === 'speaking' ? <Square className="size-3.5 fill-current" /> : <CircleStop className="size-4" />}</button></div>{state === 'recording' && <div className="mt-2 flex h-3 items-center justify-center gap-0.5">{Array.from({ length: 28 }, (_, index) => <span key={index} className="w-0.5 rounded-full bg-[#E9601F]" style={{ height: `${5 + ((index * 7) % 9)}px` }} />)}</div>}</div> }
-
-export function SourceReference({ source }: { source: SourceReference }) { return <a href={source.url ?? '#'} className="text-xs text-[#164642] underline-offset-2 hover:underline">{source.title}</a> }
 
 export const opportunityChatIcons = { MessageCircle, Volume2 }
