@@ -38,16 +38,16 @@ export interface OpportunityAiClient {
 export function createOpportunityAiClient(apiUrl: string, socketUrl: string): OpportunityAiClient {
   const voiceTransport = () => new BrowserVoiceTransport(socketUrl)
   return {
-    async getConversation(opportunityId) {
-      const response = await fetch(`/api/opportunities/${encodeURIComponent(opportunityId)}/conversation`)
-      if (!response.ok) throw new Error(`Conversation request failed (${response.status})`)
-      const data = await response.json()
-      return (Array.isArray(data) ? data : data.messages ?? []).map((message: ChatMessage) => ({ ...message, source: message.source ?? 'text' }))
+    // The AI server keeps no conversation history, so a conversation starts with the opening message.
+    async getConversation() {
+      return [createOpeningMessage()]
     },
     async sendMessage(opportunityId, message) {
       const response = await fetch(`/api/opportunities/${encodeURIComponent(opportunityId)}/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) })
-      if (!response.ok) throw new Error(`Message request failed (${response.status})`)
-      return { ...(await response.json()), source: 'text' }
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : `Message request failed (${response.status})`)
+      if (!isChatMessage(data)) throw new Error('The assistant returned an invalid response.')
+      return { ...data, source: 'text' }
     },
     createVoiceTransport: voiceTransport,
   }
@@ -90,6 +90,12 @@ export function parseVoiceEvent(value: unknown): VoiceEvent | null {
   if (event.type === 'session.timeout') return { type: event.type, message: typeof event.message === 'string' ? event.message : undefined }
   if (event.type === 'error' && typeof event.message === 'string') return { type: event.type, message: event.message }
   return null
+}
+
+function isChatMessage(value: unknown): value is ChatMessage {
+  if (!value || typeof value !== 'object') return false
+  const message = value as Record<string, unknown>
+  return typeof message.id === 'string' && message.role === 'assistant' && typeof message.content === 'string'
 }
 
 export function createOpeningMessage(): ChatMessage {
