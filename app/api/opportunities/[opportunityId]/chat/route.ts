@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server'
-import type { ChatMessage, SourceReference } from '@/lib/opportunity-ai-client'
+import type { ChatMessage } from '@/lib/opportunity-ai-client'
+import { type RagSource, toSourceReference } from '@/lib/rag-sources'
 
 // Response of the rag-getway backend: POST /chat
-interface RagSource {
-  content: string
-  metadata?: Record<string, unknown>
-  score?: number
-}
-
 interface RagChatResponse {
   answer: string
   sources?: RagSource[]
@@ -72,17 +67,6 @@ function isRagChatResponse(value: unknown): value is RagChatResponse {
   if (!value || typeof value !== 'object') return false
   const candidate = value as Record<string, unknown>
   return typeof candidate.answer === 'string' && (candidate.sources === undefined || Array.isArray(candidate.sources))
-}
-
-function toSourceReference(source: RagSource, index: number): SourceReference {
-  const metadata = source.metadata ?? {}
-  const text = (key: string) => (typeof metadata[key] === 'string' && metadata[key] ? (metadata[key] as string) : undefined)
-  return {
-    id: `source-${index + 1}`,
-    title: text('title') ?? `Source ${index + 1}`,
-    section: text('section'),
-    url: text('url'),
-  }
 }
 
 // The backend returns { detail: string } for its own errors and { detail: [...] } for validation errors.
