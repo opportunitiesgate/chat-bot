@@ -1,0 +1,68 @@
+name: Deploy
+
+# Deploys to Vercel production after CI passes for a push to main, using the exact commit CI tested.
+# Vercel's own Git integration must stay disconnected for this project, or every push deploys twice.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vercel-production
+  cancel-in-progress: false
+
+env:
+  # Identifiers, not credentials: the Vercel team and the chat-bot project.
+  VERCEL_ORG_ID: team_92qRDStC7UduQKWEKFafmJ1N
+  VERCEL_PROJECT_ID: prj_E4evaoY6aVcMmb6SJWCmSboDKhwf
+
+jobs:
+  production:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://chat.opportunitiesgate.net
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Check secrets
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::GitHub secret VERCEL_TOKEN is not set"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@62
+
+      # Pulls the production project settings. Sensitive variables such as CHAT_API_KEY
+      # are not downloaded; Vercel injects them into the functions at runtime.
+      - name: Pull Vercel project settings
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy to production
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "Deployed: $url"
+          echo "### Deployed to production: $url" >> "$GITHUB_STEP_SUMMARY"
