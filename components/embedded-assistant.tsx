@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from 'react'
 import { OpportunityChat, type PanelState } from '@/components/opportunity-chat'
+import { isAllowedOrigin } from '@/lib/embed-origins'
 
 // Messages to the host page (opportunitiesgate-front, .../[slug]/_components/opportunity-assistant.tsx),
 // which sizes the iframe to the widget. Sent only to the framing origin, and only if it is allowed.
@@ -12,7 +13,7 @@ export type EmbedMessage =
 function parentOrigin(allowedOrigins: string[]): string | null {
   if (window.parent === window) return null
   const framing = window.location.ancestorOrigins?.[0] ?? (document.referrer ? new URL(document.referrer).origin : null)
-  return framing && allowedOrigins.includes(framing) ? framing : null
+  return framing && isAllowedOrigin(framing, allowedOrigins) ? framing : null
 }
 
 function postToHost(message: EmbedMessage, allowedOrigins: string[]) {

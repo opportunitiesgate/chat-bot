@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
+import { parseAllowedOrigins } from '@/lib/embed-origins'
 
 // Embed tokens are signed by the OpportunitiesGate site (opportunitiesgate-front,
 // src/lib/opportunities/assistant.ts) for a viewer who has full access to one opportunity.
@@ -52,10 +53,7 @@ export function embedClaimsFromRequest(request: Request, opportunityId: string):
   return verifyEmbedToken(request.headers.get(EMBED_TOKEN_HEADER), opportunityId)
 }
 
-/** Origins allowed to frame /embed and to receive its postMessage events. */
+/** Origin patterns allowed to frame /embed and to receive its postMessage events. */
 export function embedAllowedOrigins(): string[] {
-  return (process.env.EMBED_ALLOWED_ORIGINS ?? 'https://opportunitiesgate.net https://www.opportunitiesgate.net')
-    .split(/[\s,]+/)
-    .map((origin) => origin.trim().replace(/\/$/, ''))
-    .filter(Boolean)
+  return parseAllowedOrigins(process.env.EMBED_ALLOWED_ORIGINS)
 }

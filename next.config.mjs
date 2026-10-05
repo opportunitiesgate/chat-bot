@@ -1,6 +1,6 @@
-// Origins allowed to frame /embed (the OpportunitiesGate site). Keep in sync with
-// embedAllowedOrigins() in lib/embed-token.ts, which reads the same variable.
-const embedAllowedOrigins = (process.env.EMBED_ALLOWED_ORIGINS ?? 'https://opportunitiesgate.net https://www.opportunitiesgate.net')
+// Origins allowed to frame /embed (the OpportunitiesGate site, every subdomain included).
+// Same variable and default as lib/embed-origins.ts; frame-ancestors understands `https://*.domain`.
+const embedAllowedOrigins = (process.env.EMBED_ALLOWED_ORIGINS ?? 'https://opportunitiesgate.net https://*.opportunitiesgate.net')
   .split(/[\s,]+/)
   .map((origin) => origin.trim().replace(/\/$/, ''))
   .filter(Boolean)
