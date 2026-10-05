@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { ChatMessage } from '@/lib/opportunity-ai-client'
+import { embedClaimsFromRequest } from '@/lib/embed-token'
 import { type RagSource, toSourceReference } from '@/lib/rag-sources'
 
 // Response of the rag-getway backend: POST /chat
@@ -16,6 +17,10 @@ export async function POST(
   { params }: { params: Promise<{ opportunityId: string }> },
 ) {
   const { opportunityId } = await params
+  // Only viewers the OpportunitiesGate site vouched for (full access to this opportunity).
+  if (!embedClaimsFromRequest(request, opportunityId)) {
+    return NextResponse.json({ error: 'This assistant session has expired. Please reload the page.' }, { status: 401 })
+  }
   const body = await request.json().catch(() => null)
   const message = typeof body?.message === 'string' ? body.message.trim() : ''
 

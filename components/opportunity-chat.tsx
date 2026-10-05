@@ -28,10 +28,15 @@ export interface OpportunityChatProps {
   opportunityId: string
   socketUrl: string
   opportunityName?: string
+  /** Signed by the OpportunitiesGate site for this viewer and opportunity; sent with every request. */
+  embedToken?: string
+  /** Inside the host page's iframe: the widget fills the iframe, which the host sizes. */
+  embedded?: boolean
+  onPanelStateChange?: (state: PanelState) => void
 }
 
 type VoiceState = 'idle' | Exclude<VoicePhase, 'ended'>
-type PanelState = 'closed' | 'open' | 'minimized'
+export type PanelState = 'closed' | 'open' | 'minimized'
 
 const DEFAULT_ERROR = 'I couldn’t retrieve an answer right now.'
 
@@ -44,7 +49,7 @@ const suggestions = [
   'How do I apply?',
 ]
 
-export function OpportunityChat({ opportunityId, socketUrl, opportunityName = 'European Innovation Funding Programme' }: OpportunityChatProps) {
+export function OpportunityChat({ opportunityId, socketUrl, opportunityName = 'this opportunity', embedToken, embedded = false, onPanelStateChange }: OpportunityChatProps) {
   const [panelState, setPanelState] = useState<PanelState>('closed')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -54,7 +59,7 @@ export function OpportunityChat({ opportunityId, socketUrl, opportunityName = 'E
   const [voiceSeconds, setVoiceSeconds] = useState(0)
   const [queuePosition, setQueuePosition] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const clientRef = useRef<OpportunityAiClient>(createOpportunityAiClient(socketUrl))
+  const clientRef = useRef<OpportunityAiClient>(createOpportunityAiClient(socketUrl, embedToken))
   const voiceRef = useRef<VoiceConversation | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -140,11 +145,13 @@ export function OpportunityChat({ opportunityId, socketUrl, opportunityName = 'E
     if (voiceState === 'connecting' || voiceState === 'queued') return conversation.end()
   }
 
+  useEffect(() => onPanelStateChange?.(panelState), [panelState, onPanelStateChange])
+
   const isVisible = panelState !== 'closed'
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3 sm:bottom-7 sm:right-7">
+    <div className={embedded ? 'fixed inset-0 flex flex-col items-end justify-end p-3' : 'fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3 sm:bottom-7 sm:right-7'}>
       {isVisible && panelState === 'open' && (
-        <section aria-label="Opportunity Assistant" className="flex h-[min(700px,calc(100vh-2rem))] w-[min(430px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[24px] border border-[#164642]/15 bg-[#FFFAF6] shadow-[0_24px_70px_rgba(13,29,79,0.2)] sm:h-[680px]">
+        <section aria-label="Opportunity Assistant" className={`flex ${embedded ? 'h-full w-full' : 'h-[min(700px,calc(100vh-2rem))] w-[min(430px,calc(100vw-2rem))] sm:h-[680px]'} flex-col overflow-hidden rounded-[24px] border border-[#164642]/15 bg-[#FFFAF6] shadow-[0_24px_70px_rgba(13,29,79,0.2)]`}>
           <header className="shrink-0 border-b border-[#164642]/10 bg-[#164642] px-5 pb-4 pt-5 text-[#FFFAF6]">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">

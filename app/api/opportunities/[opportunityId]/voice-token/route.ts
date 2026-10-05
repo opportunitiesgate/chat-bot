@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { embedClaimsFromRequest } from '@/lib/embed-token'
 
 // Exchanges the server-only CHAT_API_KEY for a short-lived, single-use voice token, so the
 // browser can open the voice WebSocket without ever seeing the API key.
@@ -9,9 +10,12 @@ export async function POST(
   { params }: { params: Promise<{ opportunityId: string }> },
 ) {
   const { opportunityId } = await params
-  const body = await request.json().catch(() => null)
-  const userId = typeof body?.userId === 'string' ? body.userId.trim() : ''
-  if (!userId) return NextResponse.json({ error: 'userId is required.' }, { status: 400 })
+  // Only viewers the OpportunitiesGate site vouched for; the voice session is tied to their user id.
+  const claims = embedClaimsFromRequest(request, opportunityId)
+  if (!claims) {
+    return NextResponse.json({ error: 'This assistant session has expired. Please reload the page.' }, { status: 401 })
+  }
+  const userId = claims.userId
 
   const apiUrl = process.env.AI_CHAT_URL ?? 'https://ai-chat.opportunitiesgate.net'
   const apiKey = process.env.CHAT_API_KEY

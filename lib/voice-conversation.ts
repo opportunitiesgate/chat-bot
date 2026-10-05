@@ -15,7 +15,6 @@ export interface VoiceHandlers {
   onEnded(message?: string): void
 }
 
-const USER_ID_STORAGE_KEY = 'opportunity-assistant-user-id'
 const RECORDER_TIMESLICE_MS = 250
 const RECORDER_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
 
@@ -50,6 +49,7 @@ export class VoiceConversation {
     private readonly socketUrl: string,
     private readonly opportunityId: string,
     private readonly handlers: VoiceHandlers,
+    private readonly authHeaders: Record<string, string> = {},
   ) {}
 
   /** Must be called from a click: it creates the AudioContext and asks for the microphone. */
@@ -63,13 +63,13 @@ export class VoiceConversation {
       return
     }
 
-    const userId = anonymousUserId()
-    const credentials = await requestVoiceToken(this.opportunityId, userId).catch((error: unknown) => {
+    const credentials = await requestVoiceToken(this.opportunityId, this.authHeaders).catch((error: unknown) => {
       this.fail(error instanceof Error ? error.message : 'The voice assistant is not available right now.')
       return null
     })
     if (!credentials || this.ended) return
-    const { token, botId } = credentials
+    // The token is bound to this user and bot; session.start must repeat them exactly.
+    const { token, userId, botId } = credentials
 
     const socket = new WebSocket(this.socketUrl)
     this.socket = socket
@@ -232,30 +232,19 @@ export class VoiceConversation {
   }
 }
 
-async function requestVoiceToken(opportunityId: string, userId: string): Promise<{ token: string; botId: string }> {
+async function requestVoiceToken(
+  opportunityId: string,
+  authHeaders: Record<string, string>,
+): Promise<{ token: string; userId: string; botId: string }> {
   const response = await fetch(`/api/opportunities/${encodeURIComponent(opportunityId)}/voice-token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId }),
+    headers: { 'Content-Type': 'application/json', ...authHeaders },
   })
   const data = await response.json().catch(() => null)
-  if (!response.ok || typeof data?.token !== 'string' || typeof data?.botId !== 'string') {
+  if (!response.ok || typeof data?.token !== 'string' || typeof data?.userId !== 'string' || typeof data?.botId !== 'string') {
     throw new Error(typeof data?.error === 'string' ? data.error : 'The voice assistant is not available right now.')
   }
-  return { token: data.token, botId: data.botId }
-}
-
-// An anonymous, per-browser id so the AI server can tell sessions apart; it identifies nobody.
-function anonymousUserId(): string {
-  try {
-    const existing = window.localStorage.getItem(USER_ID_STORAGE_KEY)
-    if (existing) return existing
-    const created = `anon-${crypto.randomUUID()}`
-    window.localStorage.setItem(USER_ID_STORAGE_KEY, created)
-    return created
-  } catch {
-    return `anon-${crypto.randomUUID()}`
-  }
+  return { token: data.token, userId: data.userId, botId: data.botId }
 }
 
 async function blobToBase64(blob: Blob): Promise<string> {
