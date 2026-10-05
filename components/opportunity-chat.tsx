@@ -1,6 +1,6 @@
 'use client'
 
-import { type CSSProperties, FormEvent, useEffect, useRef, useState } from 'react'
+import { type CSSProperties, FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import {
   ArrowUp,
   BookOpen,
@@ -39,6 +39,8 @@ export interface OpportunityChatProps {
   /** Inside the host page's iframe: the widget fills the iframe, which the host sizes. */
   embedded?: boolean
   onPanelStateChange?: (state: PanelState) => void
+  /** Size of the closed launcher or the minimized pill, so the host can fit the iframe to it. */
+  onLauncherResize?: (size: LauncherSize) => void
   /** Interface language; answers follow each question's own language. */
   locale?: Locale
   /** Replaces "Opportunity Assistant" in the header and buttons. */
@@ -51,6 +53,7 @@ export interface OpportunityChatProps {
 
 type VoiceState = 'idle' | Exclude<VoicePhase, 'ended'>
 export type PanelState = 'closed' | 'open' | 'minimized'
+export type LauncherSize = { width: number; height: number }
 
 // Every color comes from the .assistant-theme variables (app/globals.css), so the host can restyle it.
 const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--assistant-focus)'
@@ -62,6 +65,7 @@ export function OpportunityChat({
   embedToken,
   embedded = false,
   onPanelStateChange,
+  onLauncherResize,
   locale = DEFAULT_LOCALE,
   assistantName,
   logoUrl,
@@ -100,6 +104,23 @@ export function OpportunityChat({
   useEffect(() => () => voiceRef.current?.end(), [])
 
   useEffect(() => onPanelStateChange?.(panelState), [panelState, onPanelStateChange])
+
+  // The launcher's width depends on the language, the name and the logo: report it as it changes.
+  const launcherObserver = useRef<ResizeObserver | null>(null)
+  const launcherRef = useCallback(
+    (element: HTMLButtonElement | null) => {
+      launcherObserver.current?.disconnect()
+      launcherObserver.current = null
+      if (!element || !onLauncherResize) return
+      const observer = new ResizeObserver(() => {
+        const rect = element.getBoundingClientRect()
+        onLauncherResize({ width: Math.ceil(rect.width), height: Math.ceil(rect.height) })
+      })
+      observer.observe(element)
+      launcherObserver.current = observer
+    },
+    [onLauncherResize],
+  )
 
   function openPanel() {
     setPanelState('open')
@@ -249,17 +270,18 @@ export function OpportunityChat({
         </section>
       )}
       {isVisible && panelState === 'minimized' && (
-        <button onClick={() => setPanelState('open')} className={`flex items-center gap-2 rounded-full bg-(--assistant-primary) px-4 py-3 text-sm font-medium text-white shadow-lg transition hover:bg-(--assistant-primary-hover) ${FOCUS_RING}`}>
-          {logoUrl ? <Logo logoUrl={logoUrl} className="size-5 rounded-md" iconClassName="size-3" /> : <Sparkles className="size-4 text-(--assistant-focus)" />}
+        <button ref={launcherRef} onClick={() => setPanelState('open')} className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-(--assistant-primary) px-4 py-3 text-sm font-medium text-white shadow-lg transition hover:bg-(--assistant-primary-hover) ${FOCUS_RING}`}>
+          <Logo logoUrl={logoUrl} className="size-5 rounded-md" iconClassName="size-3" />
           <span className="max-w-[12rem] truncate">{name}</span>
           <Plus className="size-4" />
         </button>
       )}
       {panelState === 'closed' && (
         <button
+          ref={launcherRef}
           onClick={openPanel}
           aria-label={t.open(name)}
-          className="group flex items-center gap-2 rounded-full bg-(--assistant-primary) px-4 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(22,70,66,0.25)] transition hover:-translate-y-0.5 hover:bg-(--assistant-primary-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--assistant-focus) focus-visible:ring-offset-2"
+          className="group flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-(--assistant-primary) px-4 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(22,70,66,0.25)] transition hover:-translate-y-0.5 hover:bg-(--assistant-primary-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--assistant-focus) focus-visible:ring-offset-2"
         >
           <Logo logoUrl={logoUrl} className="size-7 rounded-full" iconClassName="size-3.5" />
           {t.askAi}
@@ -270,11 +292,18 @@ export function OpportunityChat({
   )
 }
 
-/** The host's logo when given, otherwise the sparkles badge. */
+/** The host's logo when given (and loadable), otherwise the sparkles badge. */
 function Logo({ logoUrl, className, iconClassName }: { logoUrl?: string; className: string; iconClassName: string }) {
-  if (logoUrl) {
+  const [failed, setFailed] = useState(false)
+  const image = useRef<HTMLImageElement>(null)
+  // A server-rendered image can fail before hydration, when onError is not attached yet.
+  useEffect(() => {
+    const element = image.current
+    if (element?.complete && element.naturalWidth === 0) setFailed(true)
+  }, [logoUrl])
+  if (logoUrl && !failed) {
     // eslint-disable-next-line @next/next/no-img-element -- any https origin, chosen by the host page
-    return <img src={logoUrl} alt="" className={`${className} shrink-0 bg-white object-contain p-1`} />
+    return <img ref={image} src={logoUrl} alt="" onError={() => setFailed(true)} className={`${className} shrink-0 bg-white object-contain p-1`} />
   }
   return (
     <span className={`${className} flex shrink-0 items-center justify-center bg-(--assistant-accent) text-white`}>
