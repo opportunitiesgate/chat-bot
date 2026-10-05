@@ -1,3 +1,5 @@
+import { VoiceConversation, type VoiceHandlers } from '@/lib/voice-conversation'
+
 export interface SourceReference {
   id: string
   title: string
@@ -14,29 +16,13 @@ export interface ChatMessage {
   sources?: SourceReference[]
 }
 
-export type VoiceSessionState = 'idle' | 'connecting' | 'queued' | 'active' | 'closing' | 'closed' | 'timeout' | 'error'
-
-export type VoiceEvent =
-  | { type: 'session.queued'; position: number }
-  | { type: 'session.started'; sessionId: string }
-  | { type: 'session.queue_position'; position: number }
-  | { type: 'session.timeout'; message?: string }
-  | { type: 'error'; message: string }
-
-export interface VoiceTransport {
-  connect(opportunityId: string, handlers: { onEvent: (event: VoiceEvent) => void; onClose: () => void; onError: () => void }): void
-  sendSessionEnd(): void
-  close(): void
-}
-
 export interface OpportunityAiClient {
   sendMessage(opportunityId: string, message: string): Promise<ChatMessage>
   getConversation(opportunityId: string): Promise<ChatMessage[]>
-  createVoiceTransport(): VoiceTransport
+  createVoiceConversation(opportunityId: string, handlers: VoiceHandlers): VoiceConversation
 }
 
-export function createOpportunityAiClient(apiUrl: string, socketUrl: string): OpportunityAiClient {
-  const voiceTransport = () => new BrowserVoiceTransport(socketUrl)
+export function createOpportunityAiClient(socketUrl: string): OpportunityAiClient {
   return {
     // The AI server keeps no conversation history, so a conversation starts with the opening message.
     async getConversation() {
@@ -49,47 +35,8 @@ export function createOpportunityAiClient(apiUrl: string, socketUrl: string): Op
       if (!isChatMessage(data)) throw new Error('The assistant returned an invalid response.')
       return { ...data, source: 'text' }
     },
-    createVoiceTransport: voiceTransport,
+    createVoiceConversation: (opportunityId, handlers) => new VoiceConversation(socketUrl, opportunityId, handlers),
   }
-}
-
-class BrowserVoiceTransport implements VoiceTransport {
-  private socket: WebSocket | null = null
-  constructor(private readonly socketUrl: string) {}
-
-  connect(opportunityId: string, handlers: { onEvent: (event: VoiceEvent) => void; onClose: () => void; onError: () => void }) {
-    this.close()
-    this.socket = new WebSocket(this.socketUrl)
-    this.socket.onopen = () => this.socket?.send(JSON.stringify({ type: 'session.start', opportunityId }))
-    this.socket.onmessage = (event) => {
-      try {
-        const parsed = parseVoiceEvent(JSON.parse(event.data))
-        if (parsed) handlers.onEvent(parsed)
-      } catch { handlers.onError() }
-    }
-    this.socket.onerror = handlers.onError
-    this.socket.onclose = handlers.onClose
-  }
-
-  sendSessionEnd() {
-    if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify({ type: 'session.end' }))
-  }
-
-  close() {
-    this.socket?.close()
-    this.socket = null
-  }
-}
-
-export function parseVoiceEvent(value: unknown): VoiceEvent | null {
-  if (!value || typeof value !== 'object' || !('type' in value)) return null
-  const event = value as Record<string, unknown>
-  if (event.type === 'session.queued' && typeof event.position === 'number') return { type: event.type, position: event.position }
-  if (event.type === 'session.started' && typeof event.sessionId === 'string') return { type: event.type, sessionId: event.sessionId }
-  if (event.type === 'session.queue_position' && typeof event.position === 'number') return { type: event.type, position: event.position }
-  if (event.type === 'session.timeout') return { type: event.type, message: typeof event.message === 'string' ? event.message : undefined }
-  if (event.type === 'error' && typeof event.message === 'string') return { type: event.type, message: event.message }
-  return null
 }
 
 function isChatMessage(value: unknown): value is ChatMessage {
