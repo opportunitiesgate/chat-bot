@@ -168,3 +168,19 @@ html:has([data-embedded-assistant]),
 body:has(> [data-embedded-assistant]) {
   background-color: transparent;
 }
+
+/* The assistant's palette. The host page may override the base colors (/embed?primary=…); the
+   derived shades below follow them automatically. */
+.assistant-theme {
+  --assistant-primary: #164642;
+  --assistant-accent: #e9601f;
+  --assistant-background: #fffaf6;
+  --assistant-surface: #f6efe8;
+  --assistant-text: #1b1b1b;
+  --assistant-muted: #6d7775;
+  --assistant-focus: #97c1fd;
+  --assistant-primary-hover: color-mix(in oklab, var(--assistant-primary), black 18%);
+  --assistant-accent-hover: color-mix(in oklab, var(--assistant-accent), black 13%);
+  --assistant-on-primary-muted: color-mix(in oklab, white 80%, var(--assistant-primary));
+  --assistant-error-surface: color-mix(in oklab, var(--assistant-accent) 7%, white);
+}

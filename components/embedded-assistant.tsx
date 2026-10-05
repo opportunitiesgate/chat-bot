@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { type CSSProperties, useCallback, useEffect } from 'react'
 import { OpportunityChat, type PanelState } from '@/components/opportunity-chat'
+import type { Locale } from '@/lib/i18n'
 import { isAllowedOrigin } from '@/lib/embed-origins'
 
 // Messages to the host page (opportunitiesgate-front, .../[slug]/_components/opportunity-assistant.tsx),
@@ -27,6 +28,10 @@ interface EmbeddedAssistantProps {
   embedToken: string
   socketUrl: string
   allowedOrigins: string[]
+  locale: Locale
+  assistantName?: string
+  logoUrl?: string
+  themeStyle: CSSProperties
 }
 
 export function EmbeddedAssistant({ allowedOrigins, ...chat }: EmbeddedAssistantProps) {

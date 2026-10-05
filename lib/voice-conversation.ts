@@ -1,3 +1,4 @@
+import type { ErrorKey, Locale } from '@/lib/i18n'
 import type { SourceReference } from '@/lib/opportunity-ai-client'
 import { toSourceReferences } from '@/lib/rag-sources'
 
@@ -11,23 +12,31 @@ export interface VoiceHandlers {
   onQueuePosition(position: number): void
   onTranscript(text: string): void
   onAnswer(text: string, sources: SourceReference[]): void
-  onError(message: string): void
-  onEnded(message?: string): void
+  /** A translatable error key; turn-level errors leave the session usable. */
+  onError(error: ErrorKey): void
+  onEnded(reason?: ErrorKey): void
+}
+
+const SERVER_ERROR_KEYS: readonly string[] = [
+  'NO_SPEECH',
+  'STT_FAILED',
+  'EMPTY_AUDIO',
+  'AUDIO_TOO_LARGE',
+  'AI_UNAVAILABLE',
+  'TTS_FAILED',
+  'TTS_UNAVAILABLE',
+  'UNAUTHORIZED',
+  'TURN_IN_PROGRESS',
+]
+
+class VoiceTokenError extends Error {
+  constructor(readonly key: ErrorKey) {
+    super(key)
+  }
 }
 
 const RECORDER_TIMESLICE_MS = 250
 const RECORDER_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
-
-// Turn-level errors leave the session usable; the user can simply ask again.
-const ERROR_MESSAGES: Record<string, string> = {
-  NO_SPEECH: "I didn't catch that. Please try again and speak a little closer to the microphone.",
-  STT_FAILED: "I couldn't understand the recording. Please try again.",
-  EMPTY_AUDIO: 'No audio was recorded. Please try again.',
-  AUDIO_TOO_LARGE: 'That recording was too long. Please ask a shorter question.',
-  AI_UNAVAILABLE: "I couldn't retrieve an answer right now. Please try again in a moment.",
-  TTS_FAILED: 'The answer is shown above, but it could not be spoken.',
-  UNAUTHORIZED: 'The voice session could not be authorized. Please try again.',
-}
 
 export class VoiceConversation {
   private socket: WebSocket | null = null
@@ -50,6 +59,8 @@ export class VoiceConversation {
     private readonly opportunityId: string,
     private readonly handlers: VoiceHandlers,
     private readonly authHeaders: Record<string, string> = {},
+    /** Interface language: the server uses it when the spoken language is unclear. */
+    private readonly language?: Locale,
   ) {}
 
   /** Must be called from a click: it creates the AudioContext and asks for the microphone. */
@@ -59,12 +70,12 @@ export class VoiceConversation {
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
     } catch {
-      this.fail('Microphone access was denied. Allow the microphone in your browser to talk to the assistant.')
+      this.fail('MICROPHONE_DENIED')
       return
     }
 
     const credentials = await requestVoiceToken(this.opportunityId, this.authHeaders).catch((error: unknown) => {
-      this.fail(error instanceof Error ? error.message : 'The voice assistant is not available right now.')
+      this.fail(error instanceof VoiceTokenError ? error.key : 'VOICE_UNAVAILABLE')
       return null
     })
     if (!credentials || this.ended) return
@@ -74,10 +85,12 @@ export class VoiceConversation {
     const socket = new WebSocket(this.socketUrl)
     this.socket = socket
     socket.onopen = () =>
-      socket.send(JSON.stringify({ type: 'session.start', userId, botId, opportunityId: this.opportunityId, token }))
+      socket.send(
+        JSON.stringify({ type: 'session.start', userId, botId, opportunityId: this.opportunityId, token, language: this.language }),
+      )
     socket.onmessage = (event) => this.handleEvent(event.data)
     socket.onclose = () => {
-      if (!this.ended) this.finish('The voice connection was closed.')
+      if (!this.ended) this.finish('CONNECTION_CLOSED')
     }
   }
 
@@ -150,12 +163,12 @@ export class VoiceConversation {
         break
       case 'error': {
         const code = typeof event.code === 'string' ? event.code : ''
-        this.handlers.onError(ERROR_MESSAGES[code] ?? (typeof event.message === 'string' ? event.message : 'Something went wrong.'))
+        this.handlers.onError(SERVER_ERROR_KEYS.includes(code) ? (code as ErrorKey) : 'generic')
         if (this.phase === 'processing' || this.phase === 'recording') this.setPhase('ready')
         break
       }
       case 'session.timeout':
-        this.finish(typeof event.message === 'string' ? event.message : 'The voice session has ended.')
+        this.finish(this.phase === 'queued' ? 'QUEUE_TIMEOUT' : 'SESSION_TIMEOUT')
         break
       case 'session.ended':
         this.finish()
@@ -207,12 +220,12 @@ export class VoiceConversation {
     this.handlers.onPhase(phase)
   }
 
-  private fail(message: string): void {
-    this.handlers.onError(message)
+  private fail(error: ErrorKey): void {
+    this.handlers.onError(error)
     this.finish()
   }
 
-  private finish(message?: string): void {
+  private finish(reason?: ErrorKey): void {
     if (this.ended) return
     this.ended = true
     if (this.recorder) {
@@ -228,7 +241,7 @@ export class VoiceConversation {
     }
     void this.audioContext?.close()
     this.setPhase('ended')
-    this.handlers.onEnded(message)
+    this.handlers.onEnded(reason)
   }
 }
 
@@ -242,7 +255,7 @@ async function requestVoiceToken(
   })
   const data = await response.json().catch(() => null)
   if (!response.ok || typeof data?.token !== 'string' || typeof data?.userId !== 'string' || typeof data?.botId !== 'string') {
-    throw new Error(typeof data?.error === 'string' ? data.error : 'The voice assistant is not available right now.')
+    throw new VoiceTokenError(response.status === 401 ? 'sessionExpired' : response.status === 429 ? 'rateLimited' : 'VOICE_UNAVAILABLE')
   }
   return { token: data.token, userId: data.userId, botId: data.botId }
 }

@@ -1,3 +1,4 @@
+import type { ErrorKey, Locale } from '@/lib/i18n'
 import { VoiceConversation, type VoiceHandlers } from '@/lib/voice-conversation'
 
 export interface SourceReference {
@@ -18,25 +19,40 @@ export interface ChatMessage {
 
 export interface OpportunityAiClient {
   sendMessage(opportunityId: string, message: string): Promise<ChatMessage>
-  getConversation(opportunityId: string): Promise<ChatMessage[]>
   createVoiceConversation(opportunityId: string, handlers: VoiceHandlers): VoiceConversation
 }
 
-export function createOpportunityAiClient(socketUrl: string, embedToken?: string): OpportunityAiClient {
+/** A failed text question, with a translatable reason. */
+export class ChatRequestError extends Error {
+  constructor(readonly key: ErrorKey) {
+    super(key)
+  }
+}
+
+export function createOpportunityAiClient(socketUrl: string, embedToken?: string, language?: Locale): OpportunityAiClient {
   const authHeaders: Record<string, string> = embedToken ? { 'X-Embed-Token': embedToken } : {}
   return {
-    // The AI server keeps no conversation history, so a conversation starts with the opening message.
-    async getConversation() {
-      return [createOpeningMessage()]
-    },
     async sendMessage(opportunityId, message) {
-      const response = await fetch(`/api/opportunities/${encodeURIComponent(opportunityId)}/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders }, body: JSON.stringify({ message }) })
+      let response: Response
+      try {
+        response = await fetch(`/api/opportunities/${encodeURIComponent(opportunityId)}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          // The interface language: the answer uses it only when the question's language is unclear.
+          body: JSON.stringify({ message, language }),
+        })
+      } catch {
+        throw new ChatRequestError('unreachable')
+      }
       const data = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : `Message request failed (${response.status})`)
-      if (!isChatMessage(data)) throw new Error('The assistant returned an invalid response.')
+      if (!response.ok) {
+        throw new ChatRequestError(response.status === 429 ? 'rateLimited' : response.status === 401 ? 'sessionExpired' : 'generic')
+      }
+      if (!isChatMessage(data)) throw new ChatRequestError('generic')
       return { ...data, source: 'text' }
     },
-    createVoiceConversation: (opportunityId, handlers) => new VoiceConversation(socketUrl, opportunityId, handlers, authHeaders),
+    createVoiceConversation: (opportunityId, handlers) =>
+      new VoiceConversation(socketUrl, opportunityId, handlers, authHeaders, language),
   }
 }
 
@@ -46,8 +62,9 @@ function isChatMessage(value: unknown): value is ChatMessage {
   return typeof message.id === 'string' && message.role === 'assistant' && typeof message.content === 'string'
 }
 
-export function createOpeningMessage(): ChatMessage {
-  return { id: 'welcome', role: 'assistant', source: 'text', content: "Hello. I'm here to help you make sense of this opportunity. Ask me about eligibility, deadlines, funding, or the application process and I'll point you to the relevant details.", createdAt: new Date().toISOString() }
+/** The AI server keeps no conversation history, so a conversation starts with this message. */
+export function createOpeningMessage(content: string): ChatMessage {
+  return { id: 'welcome', role: 'assistant', source: 'text', content, createdAt: new Date().toISOString() }
 }
 
 export default createOpportunityAiClient
