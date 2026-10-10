@@ -3,6 +3,7 @@
 import { type CSSProperties, FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import {
   ArrowUp,
+  ArrowUpRight,
   BookOpen,
   Check,
   ChevronRight,
@@ -28,7 +29,7 @@ import {
   createOpportunityAiClient,
 } from '@/lib/opportunity-ai-client'
 import { toHistory } from '@/lib/chat-history'
-import type { SourceReference } from '@/lib/opportunity-ai-client'
+import { type OpportunitySuggestion, opportunityPageUrl, type SourceReference } from '@/lib/opportunity-ai-client'
 import type { VoiceConversation, VoicePhase } from '@/lib/voice-conversation'
 
 export interface OpportunityChatProps {
@@ -42,6 +43,8 @@ export interface OpportunityChatProps {
   onPanelStateChange?: (state: PanelState) => void
   /** Size of the closed launcher or the minimized pill, so the host can fit the iframe to it. */
   onLauncherResize?: (size: LauncherSize) => void
+  /** Opens a suggested opportunity in the host page; returns false when it cannot (no host). */
+  onOpenSuggestion?: (suggestion: OpportunitySuggestion) => boolean
   /** Interface language; answers follow each question's own language. */
   locale?: Locale
   /** Replaces "Opportunity Assistant" in the header and buttons. */
@@ -67,6 +70,7 @@ export function OpportunityChat({
   embedded = false,
   onPanelStateChange,
   onLauncherResize,
+  onOpenSuggestion,
   locale = DEFAULT_LOCALE,
   assistantName,
   logoUrl,
@@ -147,13 +151,23 @@ export function OpportunityChat({
     }
   }
 
+  function openSuggestion(suggestion: OpportunitySuggestion) {
+    if (onOpenSuggestion?.(suggestion)) return
+    window.open(opportunityPageUrl(locale, suggestion.slug), '_blank', 'noopener,noreferrer')
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     void sendMessage()
   }
 
-  function addVoiceMessage(role: ChatMessage['role'], content: string, sources?: SourceReference[]) {
-    const message: ChatMessage = { id: `${role}-voice-${Date.now()}`, role, content, createdAt: new Date().toISOString(), source: 'voice', sources }
+  function addVoiceMessage(
+    role: ChatMessage['role'],
+    content: string,
+    sources?: SourceReference[],
+    suggestions?: OpportunitySuggestion[],
+  ) {
+    const message: ChatMessage = { id: `${role}-voice-${Date.now()}`, role, content, createdAt: new Date().toISOString(), source: 'voice', sources, suggestions }
     setMessages((current) => [...current, message])
   }
 
@@ -164,7 +178,7 @@ export function OpportunityChat({
       onPhase: (phase) => setVoiceState(phase === 'ended' ? 'idle' : phase),
       onQueuePosition: setQueuePosition,
       onTranscript: (text) => addVoiceMessage('user', text),
-      onAnswer: (text, sources) => addVoiceMessage('assistant', text, sources),
+      onAnswer: (text, sources, suggestions) => addVoiceMessage('assistant', text, sources, suggestions),
       onError: setError,
       onEnded: (reason) => {
         voiceRef.current = null
@@ -228,7 +242,7 @@ export function OpportunityChat({
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-5">
             <OpportunityContext t={t} name={opportunityName || t.thisOpportunity} />
             <div className="space-y-5">
-              {messages.map((message) => <ChatBubble key={message.id} message={message} t={t} />)}
+              {messages.map((message) => <ChatBubble key={message.id} message={message} t={t} onOpenSuggestion={openSuggestion} />)}
               {isStreaming && <StreamingMessage t={t} />}
             </div>
             {messages.length <= 1 && !isStreaming && <SuggestedQuestions t={t} onSelect={(question) => void sendMessage(question)} />}
@@ -345,7 +359,15 @@ function SuggestedQuestions({ t, onSelect }: { t: Messages; onSelect: (question:
   )
 }
 
-function ChatBubble({ message, t }: { message: ChatMessage; t: Messages }) {
+function ChatBubble({
+  message,
+  t,
+  onOpenSuggestion,
+}: {
+  message: ChatMessage
+  t: Messages
+  onOpenSuggestion: (suggestion: OpportunitySuggestion) => void
+}) {
   const isAssistant = message.role === 'assistant'
   return (
     <div className={`flex gap-2.5 ${isAssistant ? '' : 'justify-end'}`}>
@@ -355,6 +377,9 @@ function ChatBubble({ message, t }: { message: ChatMessage; t: Messages }) {
           <FormattedContent content={message.content} />
         </div>
         {message.sources && message.sources.length > 0 && <SourceReferences t={t} sources={message.sources} />}
+        {message.suggestions && message.suggestions.length > 0 && (
+          <SuggestionCards t={t} suggestions={message.suggestions} onOpen={onOpenSuggestion} />
+        )}
       </div>
     </div>
   )
@@ -394,6 +419,36 @@ function SourceReferences({ t, sources }: { t: Messages; sources: SourceReferenc
               {source.section && <span className="text-(--assistant-muted)"> · {source.section}</span>}
             </span>
           </a>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Built from the RAG server's structured suggestions (real titles and slugs), never from the answer text.
+function SuggestionCards({
+  t,
+  suggestions,
+  onOpen,
+}: {
+  t: Messages
+  suggestions: OpportunitySuggestion[]
+  onOpen: (suggestion: OpportunitySuggestion) => void
+}) {
+  return (
+    <div className="mt-2 rounded-xl border border-(--assistant-primary)/10 bg-(--assistant-surface)/70 p-2.5">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-(--assistant-muted)">{t.relatedOpportunities}</p>
+      <div className="space-y-1.5">
+        {suggestions.map((suggestion) => (
+          <button
+            key={suggestion.opportunityId}
+            type="button"
+            onClick={() => onOpen(suggestion)}
+            className={`flex w-full items-center gap-2 rounded-lg border border-(--assistant-primary)/10 bg-white px-3 py-2 text-start text-xs font-medium text-(--assistant-primary) transition hover:border-(--assistant-accent)/40 ${FOCUS_RING}`}
+          >
+            <span className="flex-1" dir="auto">{suggestion.title}</span>
+            <ArrowUpRight className="size-3.5 shrink-0 text-(--assistant-accent) rtl:-scale-x-100" />
+          </button>
         ))}
       </div>
     </div>

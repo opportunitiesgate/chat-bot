@@ -1,4 +1,4 @@
-import type { SourceReference } from '@/lib/opportunity-ai-client'
+import type { OpportunitySuggestion, SourceReference } from '@/lib/opportunity-ai-client'
 
 // A source as returned by the rag-getway backend (POST /v1/opportunity/chat and the voice WebSocket).
 export interface RagSource {
@@ -26,4 +26,27 @@ export function toSourceReferences(value: unknown): SourceReference[] {
   return (value as RagSource[])
     .map(toSourceReference)
     .filter((source): source is SourceReference => source !== undefined)
+}
+
+const MAX_SUGGESTIONS = 3
+// Slugs become part of the host page's URL: only lowercase letters, digits and dashes.
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+/** Suggestions from the RAG server (POST /v1/opportunity/chat and the voice WebSocket), validated. */
+export function toSuggestions(value: unknown): OpportunitySuggestion[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter(
+      (item): item is OpportunitySuggestion & { type: string } =>
+        !!item &&
+        typeof item === 'object' &&
+        item.type === 'opportunity' &&
+        typeof item.opportunityId === 'string' &&
+        typeof item.title === 'string' &&
+        item.title.trim() !== '' &&
+        typeof item.slug === 'string' &&
+        SLUG.test(item.slug),
+    )
+    .slice(0, MAX_SUGGESTIONS)
+    .map(({ opportunityId, title, slug }) => ({ opportunityId, title: title.trim(), slug }))
 }
