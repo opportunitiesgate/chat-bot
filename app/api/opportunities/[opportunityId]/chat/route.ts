@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server'
 import { parseHistory } from '@/lib/chat-history'
 import type { ChatMessage } from '@/lib/opportunity-ai-client'
 import { embedClaimsFromRequest } from '@/lib/embed-token'
-import { type RagSource, toSourceReferences } from '@/lib/rag-sources'
+import { type RagSource, toSourceReferences, toSuggestions } from '@/lib/rag-sources'
 
 // Response of the rag-getway backend: POST /v1/opportunity/chat
 interface RagChatResponse {
   answer: string
   sources?: RagSource[]
+  suggestions?: unknown
 }
 
 // Answer generation on the AI server can take tens of seconds on CPU.
@@ -74,6 +75,7 @@ export async function POST(
     createdAt: new Date().toISOString(),
     source: 'text',
     sources: toSourceReferences(data.sources),
+    suggestions: toSuggestions(data.suggestions),
   }
   return NextResponse.json(answer)
 }

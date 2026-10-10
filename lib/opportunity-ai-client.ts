@@ -9,6 +9,21 @@ export interface SourceReference {
   url?: string
 }
 
+/** Another opportunity the RAG server suggests; opening it navigates the host page. */
+export interface OpportunitySuggestion {
+  opportunityId: string
+  title: string
+  slug: string
+}
+
+/** The OpportunitiesGate site, for links opened outside the host page's iframe. */
+const SITE_URL = 'https://opportunitiesgate.net'
+
+/** The suggested opportunity's page on the OpportunitiesGate site, in the interface language. */
+export function opportunityPageUrl(locale: Locale, slug: string): string {
+  return `${SITE_URL}/${locale}/opportunities/${encodeURIComponent(slug)}`
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
@@ -16,6 +31,7 @@ export interface ChatMessage {
   createdAt: string
   source: 'text' | 'voice'
   sources?: SourceReference[]
+  suggestions?: OpportunitySuggestion[]
 }
 
 export interface OpportunityAiClient {
