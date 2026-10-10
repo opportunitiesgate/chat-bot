@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { ChatMessage } from '@/lib/opportunity-ai-client'
 import { embedClaimsFromRequest } from '@/lib/embed-token'
-import { type RagSource, toSourceReference } from '@/lib/rag-sources'
+import { type RagSource, toSourceReferences } from '@/lib/rag-sources'
 
 // Response of the rag-getway backend: POST /chat
 interface RagChatResponse {
@@ -70,7 +70,7 @@ export async function POST(
     content: data.answer,
     createdAt: new Date().toISOString(),
     source: 'text',
-    sources: (data.sources ?? []).map(toSourceReference),
+    sources: toSourceReferences(data.sources),
   }
   return NextResponse.json(answer)
 }
