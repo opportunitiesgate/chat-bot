@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { parseHistory } from '@/lib/chat-history'
 import type { ChatMessage } from '@/lib/opportunity-ai-client'
 import { embedClaimsFromRequest } from '@/lib/embed-token'
 import { type RagSource, toSourceReferences } from '@/lib/rag-sources'
@@ -26,6 +27,8 @@ export async function POST(
   // The interface language (e.g. "fr"), forwarded as Accept-Language: the RAG server answers in the
   // question's language and falls back to this one when that is unclear.
   const language = typeof body?.language === 'string' && /^[a-z]{2,3}$/.test(body.language) ? body.language : null
+  // The recent conversation, so the RAG server (which keeps no history) understands follow-ups.
+  const history = parseHistory(body?.history)
 
   if (!message) return NextResponse.json({ error: 'Message is required.' }, { status: 400 })
 
@@ -42,7 +45,7 @@ export async function POST(
         'X-API-Key': apiKey,
         ...(language ? { 'Accept-Language': language } : {}),
       },
-      body: JSON.stringify({ opportunityId, message }),
+      body: JSON.stringify({ opportunityId, message, history }),
       signal: AbortSignal.timeout(AI_TIMEOUT_MS),
       cache: 'no-store',
     })

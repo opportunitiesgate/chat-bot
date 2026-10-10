@@ -27,6 +27,7 @@ import {
   createOpeningMessage,
   createOpportunityAiClient,
 } from '@/lib/opportunity-ai-client'
+import { toHistory } from '@/lib/chat-history'
 import type { SourceReference } from '@/lib/opportunity-ai-client'
 import type { VoiceConversation, VoicePhase } from '@/lib/voice-conversation'
 
@@ -136,7 +137,8 @@ export function OpportunityChat({
     setError(null)
     setIsStreaming(true)
     try {
-      const answer = await clientRef.current.sendMessage(opportunityId, trimmed)
+      // `messages` is the conversation before this question (the state update above is not applied yet).
+      const answer = await clientRef.current.sendMessage(opportunityId, trimmed, toHistory(messages))
       setMessages((current) => [...current, answer])
     } catch (caught) {
       setError(caught instanceof ChatRequestError ? caught.key : 'generic')

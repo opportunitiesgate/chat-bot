@@ -1,4 +1,5 @@
 import type { ErrorKey, Locale } from '@/lib/i18n'
+import { type HistoryEntry, OPENING_MESSAGE_ID } from '@/lib/chat-history'
 import { VoiceConversation, type VoiceHandlers } from '@/lib/voice-conversation'
 
 export interface SourceReference {
@@ -18,7 +19,7 @@ export interface ChatMessage {
 }
 
 export interface OpportunityAiClient {
-  sendMessage(opportunityId: string, message: string): Promise<ChatMessage>
+  sendMessage(opportunityId: string, message: string, history?: HistoryEntry[]): Promise<ChatMessage>
   createVoiceConversation(opportunityId: string, handlers: VoiceHandlers): VoiceConversation
 }
 
@@ -32,14 +33,14 @@ export class ChatRequestError extends Error {
 export function createOpportunityAiClient(socketUrl: string, embedToken?: string, language?: Locale): OpportunityAiClient {
   const authHeaders: Record<string, string> = embedToken ? { 'X-Embed-Token': embedToken } : {}
   return {
-    async sendMessage(opportunityId, message) {
+    async sendMessage(opportunityId, message, history = []) {
       let response: Response
       try {
         response = await fetch(`/api/opportunities/${encodeURIComponent(opportunityId)}/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
           // The interface language: the answer uses it only when the question's language is unclear.
-          body: JSON.stringify({ message, language }),
+          body: JSON.stringify({ message, language, history }),
         })
       } catch {
         throw new ChatRequestError('unreachable')
@@ -62,9 +63,9 @@ function isChatMessage(value: unknown): value is ChatMessage {
   return typeof message.id === 'string' && message.role === 'assistant' && typeof message.content === 'string'
 }
 
-/** The AI server keeps no conversation history, so a conversation starts with this message. */
+/** Every conversation starts with this message; it is not part of the history sent to the AI server. */
 export function createOpeningMessage(content: string): ChatMessage {
-  return { id: 'welcome', role: 'assistant', source: 'text', content, createdAt: new Date().toISOString() }
+  return { id: OPENING_MESSAGE_ID, role: 'assistant', source: 'text', content, createdAt: new Date().toISOString() }
 }
 
 export default createOpportunityAiClient
