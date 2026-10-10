@@ -23,7 +23,7 @@ export async function POST(
 
   let response: Response
   try {
-    response = await fetch(`${apiUrl.replace(/\/$/, '')}/voice/token`, {
+    response = await fetch(`${apiUrl.replace(/\/$/, '')}/v1/opportunity/voice/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
       body: JSON.stringify({ opportunityId, userId, botId: BOT_ID }),
