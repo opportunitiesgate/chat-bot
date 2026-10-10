@@ -7,17 +7,23 @@ export interface RagSource {
   score?: number
 }
 
-export function toSourceReference(source: RagSource, index: number): SourceReference {
+// Sources without a title are not shown: a bare "Source N" tells the user nothing.
+export function toSourceReference(source: RagSource, index: number): SourceReference | undefined {
   const metadata = source.metadata ?? {}
   const text = (key: string) => (typeof metadata[key] === 'string' && metadata[key] ? (metadata[key] as string) : undefined)
+  const title = text('title')
+  if (!title) return undefined
   return {
     id: `source-${index + 1}`,
-    title: text('title') ?? `Source ${index + 1}`,
+    title,
     section: text('section'),
     url: text('url'),
   }
 }
 
 export function toSourceReferences(value: unknown): SourceReference[] {
-  return Array.isArray(value) ? (value as RagSource[]).map(toSourceReference) : []
+  if (!Array.isArray(value)) return []
+  return (value as RagSource[])
+    .map(toSourceReference)
+    .filter((source): source is SourceReference => source !== undefined)
 }
