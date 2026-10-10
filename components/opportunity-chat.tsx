@@ -43,6 +43,8 @@ export interface OpportunityChatProps {
   onPanelStateChange?: (state: PanelState) => void
   /** Size of the closed launcher or the minimized pill, so the host can fit the iframe to it. */
   onLauncherResize?: (size: LauncherSize) => void
+  /** Opens a suggested opportunity in the host page; returns false when it cannot (no host). */
+  onOpenSuggestion?: (suggestion: OpportunitySuggestion) => boolean
   /** Interface language; answers follow each question's own language. */
   locale?: Locale
   /** Replaces "Opportunity Assistant" in the header and buttons. */
@@ -68,6 +70,7 @@ export function OpportunityChat({
   embedded = false,
   onPanelStateChange,
   onLauncherResize,
+  onOpenSuggestion,
   locale = DEFAULT_LOCALE,
   assistantName,
   logoUrl,
@@ -149,6 +152,7 @@ export function OpportunityChat({
   }
 
   function openSuggestion(suggestion: OpportunitySuggestion) {
+    if (onOpenSuggestion?.(suggestion)) return
     window.open(opportunityPageUrl(locale, suggestion.slug), '_blank', 'noopener,noreferrer')
   }
 
