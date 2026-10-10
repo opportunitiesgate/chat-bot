@@ -1,6 +1,6 @@
 import type { SourceReference } from '@/lib/opportunity-ai-client'
 
-// A source as returned by the rag-getway backend (POST /chat and the voice WebSocket).
+// A source as returned by the rag-getway backend (POST /v1/opportunity/chat and the voice WebSocket).
 export interface RagSource {
   content: string
   metadata?: Record<string, unknown>

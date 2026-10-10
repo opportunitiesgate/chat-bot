@@ -4,7 +4,7 @@ import type { ChatMessage } from '@/lib/opportunity-ai-client'
 import { embedClaimsFromRequest } from '@/lib/embed-token'
 import { type RagSource, toSourceReferences } from '@/lib/rag-sources'
 
-// Response of the rag-getway backend: POST /chat
+// Response of the rag-getway backend: POST /v1/opportunity/chat
 interface RagChatResponse {
   answer: string
   sources?: RagSource[]
@@ -38,7 +38,7 @@ export async function POST(
 
   let response: Response
   try {
-    response = await fetch(`${apiUrl.replace(/\/$/, '')}/chat`, {
+    response = await fetch(`${apiUrl.replace(/\/$/, '')}/v1/opportunity/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
