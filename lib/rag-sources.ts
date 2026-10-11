@@ -1,4 +1,4 @@
-import type { ContactAction, OpportunitySuggestion, SourceReference } from '@/lib/opportunity-ai-client'
+import type { ContactAction, OpportunitySuggestion, SourceKind, SourceReference } from '@/lib/opportunity-ai-client'
 
 // A source as returned by the rag-getway backend (POST /v1/opportunity/chat and the voice WebSocket).
 export interface RagSource {
@@ -18,8 +18,14 @@ export function toSourceReference(source: RagSource, index: number): SourceRefer
     title,
     section: text('section'),
     url: text('url'),
-    ...(metadata.type === 'web' ? { kind: 'web' as const } : {}),
+    ...(isSourceKind(metadata.type) ? { kind: metadata.type } : {}),
   }
+}
+
+const SOURCE_KINDS: readonly string[] = ['page', 'organization', 'web']
+
+function isSourceKind(value: unknown): value is SourceKind {
+  return typeof value === 'string' && SOURCE_KINDS.includes(value)
 }
 
 export function toSourceReferences(value: unknown): SourceReference[] {
