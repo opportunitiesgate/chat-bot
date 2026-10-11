@@ -15,6 +15,7 @@ import {
   Minus,
   Plus,
   RotateCcw,
+  Send,
   Sparkles,
   Square,
   Volume2,
@@ -29,7 +30,12 @@ import {
   createOpportunityAiClient,
 } from '@/lib/opportunity-ai-client'
 import { toHistory } from '@/lib/chat-history'
-import { type OpportunitySuggestion, opportunityPageUrl, type SourceReference } from '@/lib/opportunity-ai-client'
+import {
+  type ContactAction,
+  type OpportunitySuggestion,
+  opportunityPageUrl,
+  type SourceReference,
+} from '@/lib/opportunity-ai-client'
 import type { VoiceConversation, VoicePhase } from '@/lib/voice-conversation'
 
 export interface OpportunityChatProps {
@@ -156,6 +162,22 @@ export function OpportunityChat({
     window.open(opportunityPageUrl(locale, suggestion.slug), '_blank', 'noopener,noreferrer')
   }
 
+  // Called by the card when the user presses Send; true once the team has the message.
+  async function sendContact(action: ContactAction, draft: { subject: string; message: string }): Promise<boolean> {
+    setError(null)
+    try {
+      await clientRef.current.sendContactMessage(opportunityId, { token: action.token, language: action.language, ...draft })
+    } catch (caught) {
+      setError(caught instanceof ChatRequestError ? caught.key : 'contactFailed')
+      return false
+    }
+    setMessages((current) => [
+      ...current,
+      { id: `assistant-contact-${Date.now()}`, role: 'assistant', content: t.contact.sent, createdAt: new Date().toISOString(), source: 'text' },
+    ])
+    return true
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     void sendMessage()
@@ -166,8 +188,9 @@ export function OpportunityChat({
     content: string,
     sources?: SourceReference[],
     suggestions?: OpportunitySuggestion[],
+    actions?: ContactAction[],
   ) {
-    const message: ChatMessage = { id: `${role}-voice-${Date.now()}`, role, content, createdAt: new Date().toISOString(), source: 'voice', sources, suggestions }
+    const message: ChatMessage = { id: `${role}-voice-${Date.now()}`, role, content, createdAt: new Date().toISOString(), source: 'voice', sources, suggestions, actions }
     setMessages((current) => [...current, message])
   }
 
@@ -178,7 +201,7 @@ export function OpportunityChat({
       onPhase: (phase) => setVoiceState(phase === 'ended' ? 'idle' : phase),
       onQueuePosition: setQueuePosition,
       onTranscript: (text) => addVoiceMessage('user', text),
-      onAnswer: (text, sources, suggestions) => addVoiceMessage('assistant', text, sources, suggestions),
+      onAnswer: (text, sources, suggestions, actions) => addVoiceMessage('assistant', text, sources, suggestions, actions),
       onError: setError,
       onEnded: (reason) => {
         voiceRef.current = null
@@ -242,7 +265,9 @@ export function OpportunityChat({
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-5">
             <OpportunityContext t={t} name={opportunityName || t.thisOpportunity} />
             <div className="space-y-5">
-              {messages.map((message) => <ChatBubble key={message.id} message={message} t={t} onOpenSuggestion={openSuggestion} />)}
+              {messages.map((message) => (
+                <ChatBubble key={message.id} message={message} t={t} onOpenSuggestion={openSuggestion} onSendContact={sendContact} />
+              ))}
               {isStreaming && <StreamingMessage t={t} />}
             </div>
             {messages.length <= 1 && !isStreaming && <SuggestedQuestions t={t} onSelect={(question) => void sendMessage(question)} />}
@@ -363,10 +388,12 @@ function ChatBubble({
   message,
   t,
   onOpenSuggestion,
+  onSendContact,
 }: {
   message: ChatMessage
   t: Messages
   onOpenSuggestion: (suggestion: OpportunitySuggestion) => void
+  onSendContact: (action: ContactAction, draft: { subject: string; message: string }) => Promise<boolean>
 }) {
   const isAssistant = message.role === 'assistant'
   return (
@@ -380,6 +407,7 @@ function ChatBubble({
         {message.suggestions && message.suggestions.length > 0 && (
           <SuggestionCards t={t} suggestions={message.suggestions} onOpen={onOpenSuggestion} />
         )}
+        {message.actions?.map((action) => <ContactActionCard key={action.id} t={t} action={action} onSend={onSendContact} />)}
       </div>
     </div>
   )
@@ -421,6 +449,66 @@ function SourceReferences({ t, sources }: { t: Messages; sources: SourceReferenc
           </a>
         ))}
       </div>
+    </div>
+  )
+}
+
+const MAX_CONTACT_SUBJECT = 150
+const MAX_CONTACT_MESSAGE = 3000
+
+// A message to the team drafted by the RAG server. The user can edit it; nothing is sent until they
+// press Send (a button, never a spoken "yes"). The sender is their signed-in account.
+function ContactActionCard({
+  t,
+  action,
+  onSend,
+}: {
+  t: Messages
+  action: ContactAction
+  onSend: (action: ContactAction, draft: { subject: string; message: string }) => Promise<boolean>
+}) {
+  const [subject, setSubject] = useState(action.subject)
+  const [message, setMessage] = useState(action.message)
+  const [status, setStatus] = useState<'draft' | 'sending' | 'sent' | 'cancelled'>('draft')
+  const editable = status === 'draft'
+  const canSend = editable && subject.trim() !== '' && message.trim() !== ''
+
+  async function send() {
+    if (!canSend) return
+    setStatus('sending')
+    setStatus((await onSend(action, { subject: subject.trim(), message: message.trim() })) ? 'sent' : 'draft')
+  }
+
+  const field = `w-full rounded-lg border border-(--assistant-primary)/15 bg-white px-2.5 py-2 text-xs text-(--assistant-text) outline-none focus:border-(--assistant-primary)/40 disabled:opacity-70 ${FOCUS_RING}`
+  return (
+    <div className="mt-2 space-y-2 rounded-xl border border-(--assistant-primary)/10 bg-(--assistant-surface)/70 p-2.5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-(--assistant-muted)">{action.label}</p>
+      <label className="block space-y-1">
+        <span className="text-[11px] font-medium text-(--assistant-muted)">{t.contact.subject}</span>
+        <input value={subject} onChange={(event) => setSubject(event.target.value)} maxLength={MAX_CONTACT_SUBJECT} disabled={!editable} dir="auto" className={field} />
+      </label>
+      <label className="block space-y-1">
+        <span className="text-[11px] font-medium text-(--assistant-muted)">{t.contact.message}</span>
+        <textarea value={message} onChange={(event) => setMessage(event.target.value)} maxLength={MAX_CONTACT_MESSAGE} rows={5} disabled={!editable} dir="auto" className={`${field} resize-y`} />
+      </label>
+      {status === 'cancelled' ? (
+        <p className="text-xs text-(--assistant-muted)">{t.contact.cancelled}</p>
+      ) : status === 'sent' ? (
+        <p className="flex items-center gap-1.5 text-xs font-medium text-(--assistant-primary)"><Check className="size-3.5" />{t.contact.sent}</p>
+      ) : (
+        <>
+          <p className="text-[11px] text-(--assistant-muted)">{t.contact.note}</p>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setStatus('cancelled')} disabled={status === 'sending'} className={`rounded-lg px-3 py-1.5 text-xs font-medium text-(--assistant-primary) transition hover:bg-white disabled:opacity-40 ${FOCUS_RING}`}>
+              {t.contact.cancel}
+            </button>
+            <button type="button" onClick={() => void send()} disabled={!canSend} className={`flex items-center gap-1.5 rounded-lg bg-(--assistant-accent) px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-(--assistant-accent-hover) disabled:cursor-not-allowed disabled:opacity-40 ${FOCUS_RING}`}>
+              {status === 'sending' ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5 rtl:-scale-x-100" />}
+              {status === 'sending' ? t.contact.sending : t.contact.send}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

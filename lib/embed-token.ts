@@ -3,14 +3,18 @@ import { parseAllowedOrigins } from '@/lib/embed-origins'
 
 // Embed tokens are signed by the OpportunitiesGate site (opportunitiesgate-front,
 // src/lib/opportunities/assistant.ts) for a viewer who has full access to one opportunity.
-// Format: base64url(JSON { opp, sub, title, exp }) "." base64url(HMAC-SHA256), with the
-// secret both apps share (EMBED_SIGNING_SECRET here, OPPORTUNITY_ASSISTANT_EMBED_SECRET there).
+// Format: base64url(JSON { opp, sub, title, exp, name?, email?, slug? }) "." base64url(HMAC-SHA256),
+// with the secret both apps share (EMBED_SIGNING_SECRET here, OPPORTUNITY_ASSISTANT_EMBED_SECRET
+// there). name and email identify the sender of a message to the team; slug links back to the page.
 
 export interface EmbedClaims {
   opportunityId: string
   userId: string
   title: string
   expiresAt: number
+  name?: string
+  email?: string
+  slug?: string
 }
 
 export const EMBED_TOKEN_HEADER = 'X-Embed-Token'
@@ -45,7 +49,14 @@ export function verifyEmbedToken(token: string | null | undefined, opportunityId
     userId: claims.sub,
     title: typeof claims.title === 'string' ? claims.title : '',
     expiresAt: claims.exp,
+    name: optionalText(claims.name),
+    email: optionalText(claims.email),
+    slug: optionalText(claims.slug),
   }
+}
+
+function optionalText(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
 
 /** The embed token sent by the widget with each request to the API routes. */

@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server'
 import { parseHistory } from '@/lib/chat-history'
 import type { ChatMessage } from '@/lib/opportunity-ai-client'
 import { embedClaimsFromRequest } from '@/lib/embed-token'
-import { type RagSource, toSourceReferences, toSuggestions } from '@/lib/rag-sources'
+import { type RagSource, toContactActions, toSourceReferences, toSuggestions } from '@/lib/rag-sources'
 
 // Response of the rag-getway backend: POST /v1/opportunity/chat
 interface RagChatResponse {
   answer: string
   sources?: RagSource[]
   suggestions?: unknown
+  actions?: unknown
 }
 
 // Answer generation on the AI server can take tens of seconds on CPU.
@@ -20,7 +21,8 @@ export async function POST(
 ) {
   const { opportunityId } = await params
   // Only viewers the OpportunitiesGate site vouched for (full access to this opportunity).
-  if (!embedClaimsFromRequest(request, opportunityId)) {
+  const claims = embedClaimsFromRequest(request, opportunityId)
+  if (!claims) {
     return NextResponse.json({ error: 'This assistant session has expired. Please reload the page.' }, { status: 401 })
   }
   const body = await request.json().catch(() => null)
@@ -46,7 +48,8 @@ export async function POST(
         'X-API-Key': apiKey,
         ...(language ? { 'Accept-Language': language } : {}),
       },
-      body: JSON.stringify({ opportunityId, message, history }),
+      // userId comes from the signed embed token: it binds drafted messages to the team to this viewer.
+      body: JSON.stringify({ opportunityId, userId: claims.userId, message, history }),
       signal: AbortSignal.timeout(AI_TIMEOUT_MS),
       cache: 'no-store',
     })
@@ -76,6 +79,7 @@ export async function POST(
     source: 'text',
     sources: toSourceReferences(data.sources),
     suggestions: toSuggestions(data.suggestions),
+    actions: toContactActions(data.actions),
   }
   return NextResponse.json(answer)
 }

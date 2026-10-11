@@ -17,11 +17,30 @@ export interface OpportunitySuggestion {
 }
 
 /** The OpportunitiesGate site, for links opened outside the host page's iframe. */
-const SITE_URL = 'https://opportunitiesgate.net'
+export const SITE_URL = 'https://opportunitiesgate.net'
 
 /** The suggested opportunity's page on the OpportunitiesGate site, in the interface language. */
 export function opportunityPageUrl(locale: Locale, slug: string): string {
   return `${SITE_URL}/${locale}/opportunities/${encodeURIComponent(slug)}`
+}
+
+/** A message to the OpportunitiesGate team drafted by the RAG server; sent only when the user clicks Send. */
+export interface ContactAction {
+  id: string
+  label: string
+  subject: string
+  message: string
+  language: string
+  token: string
+  expiresAt: string
+}
+
+/** What the user confirms: the action's token and their (possibly edited) subject and message. */
+export interface ContactMessage {
+  token: string
+  subject: string
+  message: string
+  language: string
 }
 
 export interface ChatMessage {
@@ -32,11 +51,13 @@ export interface ChatMessage {
   source: 'text' | 'voice'
   sources?: SourceReference[]
   suggestions?: OpportunitySuggestion[]
+  actions?: ContactAction[]
 }
 
 export interface OpportunityAiClient {
   sendMessage(opportunityId: string, message: string, history?: HistoryEntry[]): Promise<ChatMessage>
   createVoiceConversation(opportunityId: string, handlers: VoiceHandlers): VoiceConversation
+  sendContactMessage(opportunityId: string, contact: ContactMessage): Promise<void>
 }
 
 /** A failed text question, with a translatable reason. */
@@ -70,6 +91,34 @@ export function createOpportunityAiClient(socketUrl: string, embedToken?: string
     },
     createVoiceConversation: (opportunityId, handlers) =>
       new VoiceConversation(socketUrl, opportunityId, handlers, authHeaders, language),
+    async sendContactMessage(opportunityId, contact) {
+      let response: Response
+      try {
+        response = await fetch(`/api/opportunities/${encodeURIComponent(opportunityId)}/actions/confirm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify(contact),
+        })
+      } catch {
+        throw new ChatRequestError('unreachable')
+      }
+      if (response.ok) return
+      const code = await response
+        .json()
+        .then((data: { code?: unknown }) => data?.code)
+        .catch(() => undefined)
+      throw new ChatRequestError(
+        response.status === 401
+          ? 'sessionExpired'
+          : code === 'EXPIRED'
+            ? 'contactExpired'
+            : code === 'LIMIT'
+              ? 'contactLimit'
+              : code === 'NO_EMAIL'
+                ? 'contactNoEmail'
+                : 'contactFailed',
+      )
+    },
   }
 }
 
