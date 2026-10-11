@@ -1,16 +1,7 @@
 import { NextResponse } from 'next/server'
 import { parseHistory } from '@/lib/chat-history'
-import type { ChatMessage } from '@/lib/opportunity-ai-client'
 import { embedClaimsFromRequest } from '@/lib/embed-token'
-import { type RagSource, toContactActions, toSourceReferences, toSuggestions } from '@/lib/rag-sources'
-
-// Response of the rag-getway backend: POST /v1/opportunity/chat
-interface RagChatResponse {
-  answer: string
-  sources?: RagSource[]
-  suggestions?: unknown
-  actions?: unknown
-}
+import { gatewayErrorMessage, isRagChatResponse, toAssistantMessage } from '@/lib/rag-response'
 
 // Answer generation on the AI server can take tens of seconds on CPU.
 const AI_TIMEOUT_MS = 180_000
@@ -62,7 +53,7 @@ export async function POST(
   if (!response.ok) {
     const retryAfter = response.headers.get('Retry-After')
     return NextResponse.json(
-      { error: errorMessage(response.status, data) },
+      { error: gatewayErrorMessage(response.status, data) },
       { status: response.status, headers: retryAfter ? { 'Retry-After': retryAfter } : undefined },
     )
   }
@@ -70,31 +61,5 @@ export async function POST(
   if (!isRagChatResponse(data)) {
     return NextResponse.json({ error: 'The assistant returned an invalid response.' }, { status: 502 })
   }
-
-  const answer: ChatMessage = {
-    id: `assistant-${crypto.randomUUID()}`,
-    role: 'assistant',
-    content: data.answer,
-    createdAt: new Date().toISOString(),
-    source: 'text',
-    sources: toSourceReferences(data.sources),
-    suggestions: toSuggestions(data.suggestions),
-    actions: toContactActions(data.actions),
-  }
-  return NextResponse.json(answer)
-}
-
-function isRagChatResponse(value: unknown): value is RagChatResponse {
-  if (!value || typeof value !== 'object') return false
-  const candidate = value as Record<string, unknown>
-  return typeof candidate.answer === 'string' && (candidate.sources === undefined || Array.isArray(candidate.sources))
-}
-
-// The backend returns { detail: string } for its own errors and { detail: [...] } for validation errors.
-function errorMessage(status: number, data: unknown): string {
-  if (status === 429) return 'Too many questions in a short time. Please wait a moment and try again.'
-  if (status === 401 || status === 403) return 'The assistant is not configured correctly.'
-  if (status === 422) return 'The question could not be processed.'
-  const detail = data && typeof data === 'object' ? (data as Record<string, unknown>).detail : undefined
-  return typeof detail === 'string' ? detail : 'The assistant could not answer right now.'
+  return NextResponse.json(toAssistantMessage(data))
 }

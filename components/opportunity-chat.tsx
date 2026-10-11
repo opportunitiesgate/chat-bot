@@ -23,7 +23,8 @@ import {
   Volume2,
   X,
 } from 'lucide-react'
-import { DEFAULT_LOCALE, type ErrorKey, isRtl, type Locale, MESSAGES, type Messages } from '@/lib/i18n'
+import { DEFAULT_LOCALE, type ErrorKey, isRtl, type Locale, type Messages, messagesFor } from '@/lib/i18n'
+import type { SiteAssistant } from '@/lib/embed-token'
 import {
   ChatMessage,
   ChatRequestError,
@@ -62,6 +63,8 @@ export interface OpportunityChatProps {
   logoUrl?: string
   /** CSS custom properties overriding the default palette (see lib/embed-options.ts). */
   themeStyle?: CSSProperties
+  /** A site-wide assistant (e.g. legal) instead of the opportunity one: its own texts and chat route, no voice. */
+  siteAssistant?: SiteAssistant
 }
 
 type VoiceState = 'idle' | Exclude<VoicePhase, 'ended'>
@@ -84,8 +87,11 @@ export function OpportunityChat({
   assistantName,
   logoUrl,
   themeStyle,
+  siteAssistant,
 }: OpportunityChatProps) {
-  const t = MESSAGES[locale]
+  const t = messagesFor(locale, siteAssistant)
+  // The gateway's voice serves the opportunity assistant only.
+  const voiceEnabled = !siteAssistant
   const name = assistantName || t.assistantName
   const [panelState, setPanelState] = useState<PanelState>('closed')
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -97,7 +103,9 @@ export function OpportunityChat({
   // A tool the RAG server is running for the current voice question (e.g. "web_search").
   const [voiceTool, setVoiceTool] = useState<string | null>(null)
   const [error, setError] = useState<ErrorKey | null>(null)
-  const clientRef = useRef<OpportunityAiClient>(createOpportunityAiClient(socketUrl, embedToken, locale))
+  const clientRef = useRef<OpportunityAiClient>(
+    createOpportunityAiClient(socketUrl, embedToken, locale, siteAssistant ? `/api/assistants/${siteAssistant}/chat` : undefined),
+  )
   const voiceRef = useRef<VoiceConversation | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -298,15 +306,17 @@ export function OpportunityChat({
                 dir="auto"
                 className="min-w-0 flex-1 bg-transparent px-2 text-sm text-(--assistant-text) outline-none placeholder:text-(--assistant-muted)"
               />
-              <button
-                type="button"
-                onClick={handleMicClick}
-                disabled={voiceState === 'processing' || isStreaming}
-                aria-label={voiceState === 'recording' ? t.sendVoiceQuestion : t.askByVoice}
-                className={`flex size-9 shrink-0 items-center justify-center rounded-xl transition ${FOCUS_RING} ${voiceState === 'recording' ? 'bg-(--assistant-accent) text-white' : 'text-(--assistant-primary) hover:bg-(--assistant-surface)'}`}
-              >
-                <Mic className="size-4" />
-              </button>
+              {voiceEnabled && (
+                <button
+                  type="button"
+                  onClick={handleMicClick}
+                  disabled={voiceState === 'processing' || isStreaming}
+                  aria-label={voiceState === 'recording' ? t.sendVoiceQuestion : t.askByVoice}
+                  className={`flex size-9 shrink-0 items-center justify-center rounded-xl transition ${FOCUS_RING} ${voiceState === 'recording' ? 'bg-(--assistant-accent) text-white' : 'text-(--assistant-primary) hover:bg-(--assistant-surface)'}`}
+                >
+                  <Mic className="size-4" />
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={!input.trim() || isStreaming || voiceState !== 'idle'}

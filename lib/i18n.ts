@@ -351,3 +351,63 @@ const ar: Messages = {
 }
 
 export const MESSAGES: Record<Locale, Messages> = { en, fr, ar }
+
+// Texts of the site-wide legal assistant: the opportunity texts it replaces, per language.
+const LEGAL_TEXTS: Record<Locale, Partial<Messages>> = {
+  en: {
+    assistantName: 'OpportunitiesGate Assistant',
+    thisOpportunity: 'our legal pages',
+    currentOpportunity: 'Topic',
+    exploreOpportunity: 'Ask about our legal pages',
+    suggestions: [
+      'How is my personal data used?',
+      'Can I delete my account and data?',
+      'What do the terms of use say about payments?',
+      'Which cookies do you use?',
+    ],
+    thinking: 'Checking our legal pages',
+    inputPlaceholder: 'Ask about terms, privacy or cookies...',
+    footer: 'Answers are based on OpportunitiesGate’s legal pages, not legal advice',
+    opening:
+      'Hello. I can help you understand OpportunitiesGate’s terms of use, privacy policy and cookie policy. What would you like to know?',
+  },
+  fr: {
+    assistantName: 'Assistant OpportunitiesGate',
+    thisOpportunity: 'nos pages légales',
+    currentOpportunity: 'Sujet',
+    exploreOpportunity: 'Questions sur nos pages légales',
+    suggestions: [
+      'Comment mes données personnelles sont-elles utilisées ?',
+      'Puis-je supprimer mon compte et mes données ?',
+      'Que disent les conditions d’utilisation sur les paiements ?',
+      'Quels cookies utilisez-vous ?',
+    ],
+    thinking: 'Consultation de nos pages légales',
+    inputPlaceholder: 'Posez une question sur les conditions, la confidentialité ou les cookies...',
+    footer: 'Réponses fondées sur les pages légales d’OpportunitiesGate, pas un conseil juridique',
+    opening:
+      'Bonjour. Je peux vous aider à comprendre les conditions d’utilisation, la politique de confidentialité et la politique de cookies d’OpportunitiesGate. Que souhaitez-vous savoir ?',
+  },
+  ar: {
+    assistantName: 'مساعد OpportunitiesGate',
+    thisOpportunity: 'صفحاتنا القانونية',
+    currentOpportunity: 'الموضوع',
+    exploreOpportunity: 'اسأل عن صفحاتنا القانونية',
+    suggestions: [
+      'كيف تُستخدم بياناتي الشخصية؟',
+      'هل يمكنني حذف حسابي وبياناتي؟',
+      'ماذا تقول شروط الاستخدام عن المدفوعات؟',
+      'ما ملفات تعريف الارتباط التي تستخدمونها؟',
+    ],
+    thinking: 'جارٍ مراجعة صفحاتنا القانونية',
+    inputPlaceholder: 'اسأل عن الشروط أو الخصوصية أو ملفات تعريف الارتباط...',
+    footer: 'الإجابات مبنية على الصفحات القانونية لـ OpportunitiesGate وليست استشارة قانونية',
+    opening:
+      'مرحبا. يمكنني مساعدتك في فهم شروط الاستخدام وسياسة الخصوصية وسياسة ملفات تعريف الارتباط في OpportunitiesGate. ماذا تريد أن تعرف؟',
+  },
+}
+
+/** The interface texts, with a site assistant's own texts when it is not the opportunity assistant. */
+export function messagesFor(locale: Locale, siteAssistant?: 'legal'): Messages {
+  return siteAssistant === 'legal' ? { ...MESSAGES[locale], ...LEGAL_TEXTS[locale] } : MESSAGES[locale]
+}
