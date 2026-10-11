@@ -73,13 +73,19 @@ export class ChatRequestError extends Error {
   }
 }
 
-export function createOpportunityAiClient(socketUrl: string, embedToken?: string, language?: Locale): OpportunityAiClient {
+/** `chatPath` replaces the opportunity chat route, e.g. /api/assistants/legal/chat for a site assistant. */
+export function createOpportunityAiClient(
+  socketUrl: string,
+  embedToken?: string,
+  language?: Locale,
+  chatPath?: string,
+): OpportunityAiClient {
   const authHeaders: Record<string, string> = embedToken ? { 'X-Embed-Token': embedToken } : {}
   return {
     async sendMessage(opportunityId, message, history = []) {
       let response: Response
       try {
-        response = await fetch(`/api/opportunities/${encodeURIComponent(opportunityId)}/chat`, {
+        response = await fetch(chatPath ?? `/api/opportunities/${encodeURIComponent(opportunityId)}/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
           // The interface language: the answer uses it only when the question's language is unclear.

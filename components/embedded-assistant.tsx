@@ -5,6 +5,7 @@ import { type LauncherSize, OpportunityChat, type PanelState } from '@/component
 import type { Locale } from '@/lib/i18n'
 import { isAllowedOrigin } from '@/lib/embed-origins'
 import type { OpportunitySuggestion } from '@/lib/opportunity-ai-client'
+import type { SiteAssistant } from '@/lib/embed-token'
 
 // Messages to the host page (opportunitiesgate-front, .../[slug]/_components/opportunity-assistant.tsx),
 // which sizes the iframe to the widget and opens suggested opportunities (a link inside the iframe
@@ -41,6 +42,7 @@ interface EmbeddedAssistantProps {
   assistantName?: string
   logoUrl?: string
   themeStyle: CSSProperties
+  siteAssistant?: SiteAssistant
 }
 
 export function EmbeddedAssistant({ allowedOrigins, ...chat }: EmbeddedAssistantProps) {

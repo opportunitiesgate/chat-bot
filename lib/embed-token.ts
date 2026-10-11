@@ -19,7 +19,8 @@ export interface EmbedClaims {
 
 export const EMBED_TOKEN_HEADER = 'X-Embed-Token'
 
-export function verifyEmbedToken(token: string | null | undefined, opportunityId: string, now = Date.now()): EmbedClaims | null {
+/** The claims of a token signed with EMBED_SIGNING_SECRET, or null if it is forged or malformed. */
+function signedClaims(token: string | null | undefined): Record<string, unknown> | null {
   const secret = process.env.EMBED_SIGNING_SECRET
   if (!secret || !token) return null
   const [payload, signature, extra] = token.split('.')
@@ -29,12 +30,17 @@ export function verifyEmbedToken(token: string | null | undefined, opportunityId
   const given = Buffer.from(signature, 'base64url')
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null
 
-  let claims: Record<string, unknown>
   try {
-    claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+    const claims: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+    return claims && typeof claims === 'object' ? (claims as Record<string, unknown>) : null
   } catch {
     return null
   }
+}
+
+export function verifyEmbedToken(token: string | null | undefined, opportunityId: string, now = Date.now()): EmbedClaims | null {
+  const claims = signedClaims(token)
+  if (!claims) return null
   if (
     typeof claims.opp !== 'string' ||
     typeof claims.sub !== 'string' ||
@@ -57,6 +63,43 @@ export function verifyEmbedToken(token: string | null | undefined, opportunityId
 
 function optionalText(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+// Site-wide assistants, framed on every public page (except opportunity pages). Their token,
+// signed by the OpportunitiesGate site with the same secret, is { ast, sub, exp }: it names the
+// assistant and has no "opp", so an opportunity token never opens a site assistant and vice versa.
+export const SITE_ASSISTANTS = ['legal'] as const
+export type SiteAssistant = (typeof SITE_ASSISTANTS)[number]
+
+export interface SiteClaims {
+  assistant: SiteAssistant
+  /** The signed-in user's id, or "guest". */
+  userId: string
+  expiresAt: number
+}
+
+export function isSiteAssistant(value: string): value is SiteAssistant {
+  return (SITE_ASSISTANTS as readonly string[]).includes(value)
+}
+
+export function verifySiteToken(token: string | null | undefined, assistant: string, now = Date.now()): SiteClaims | null {
+  const claims = signedClaims(token)
+  if (
+    !claims ||
+    !isSiteAssistant(assistant) ||
+    claims.ast !== assistant ||
+    'opp' in claims ||
+    typeof claims.sub !== 'string' ||
+    typeof claims.exp !== 'number' ||
+    claims.exp * 1000 < now
+  ) {
+    return null
+  }
+  return { assistant, userId: claims.sub, expiresAt: claims.exp }
+}
+
+export function siteClaimsFromRequest(request: Request, assistant: string): SiteClaims | null {
+  return verifySiteToken(request.headers.get(EMBED_TOKEN_HEADER), assistant)
 }
 
 /** The embed token sent by the widget with each request to the API routes. */
