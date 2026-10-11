@@ -51,6 +51,7 @@ export interface Messages {
   suggestions: string[]
   thinking: string
   sources: string
+  webSource: string
   relatedOpportunities: string
   inputPlaceholder: string
   askQuestion: string
@@ -70,6 +71,7 @@ export interface Messages {
     recording: string
     processing: string
     speaking: string
+    searchingWeb: string
     skip: string
     end: string
   }
@@ -106,6 +108,7 @@ const en: Messages = {
   ],
   thinking: 'Thinking through the opportunity',
   sources: 'Sources',
+  webSource: 'Organizer’s website',
   relatedOpportunities: 'Related opportunities',
   inputPlaceholder: 'Ask about this opportunity...',
   askQuestion: 'Ask a question',
@@ -127,6 +130,7 @@ const en: Messages = {
     recording: 'Listening... tap the microphone to send.',
     processing: 'Thinking about your question...',
     speaking: 'Assistant is speaking... tap to skip.',
+    searchingWeb: 'Checking the organizer’s website...',
     skip: 'Skip spoken answer',
     end: 'End voice conversation',
   },
@@ -185,6 +189,7 @@ const fr: Messages = {
   ],
   thinking: 'Analyse de l’opportunité en cours',
   sources: 'Sources',
+  webSource: 'Site de l’organisateur',
   relatedOpportunities: 'Opportunités similaires',
   inputPlaceholder: 'Posez une question sur cette opportunité...',
   askQuestion: 'Poser une question',
@@ -208,6 +213,7 @@ const fr: Messages = {
     recording: 'Écoute en cours... touchez le micro pour envoyer.',
     processing: 'Réflexion sur votre question...',
     speaking: 'L’assistant parle... touchez pour passer.',
+    searchingWeb: 'Vérification du site de l’organisateur...',
     skip: 'Passer la réponse orale',
     end: 'Terminer la conversation vocale',
   },
@@ -266,6 +272,7 @@ const ar: Messages = {
   ],
   thinking: 'جارٍ تحليل الفرصة',
   sources: 'المصادر',
+  webSource: 'موقع الجهة المنظمة',
   relatedOpportunities: 'فرص مشابهة',
   inputPlaceholder: 'اسأل عن هذه الفرصة...',
   askQuestion: 'اطرح سؤالًا',
@@ -287,6 +294,7 @@ const ar: Messages = {
     recording: 'جارٍ الاستماع... اضغط على الميكروفون للإرسال.',
     processing: 'جارٍ التفكير في سؤالك...',
     speaking: 'المساعد يتحدث... اضغط للتخطي.',
+    searchingWeb: 'جارٍ التحقق من موقع الجهة المنظمة...',
     skip: 'تخطي الإجابة الصوتية',
     end: 'إنهاء المحادثة الصوتية',
   },

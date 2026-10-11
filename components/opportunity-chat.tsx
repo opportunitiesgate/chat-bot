@@ -9,6 +9,7 @@ import {
   ChevronRight,
   CircleStop,
   FileText,
+  Globe,
   HelpCircle,
   Loader2,
   Mic,
@@ -91,6 +92,8 @@ export function OpportunityChat({
   const [voiceState, setVoiceState] = useState<VoiceState>('idle')
   const [voiceSeconds, setVoiceSeconds] = useState(0)
   const [queuePosition, setQueuePosition] = useState<number | null>(null)
+  // A tool the RAG server is running for the current voice question (e.g. "web_search").
+  const [voiceTool, setVoiceTool] = useState<string | null>(null)
   const [error, setError] = useState<ErrorKey | null>(null)
   const clientRef = useRef<OpportunityAiClient>(createOpportunityAiClient(socketUrl, embedToken, locale))
   const voiceRef = useRef<VoiceConversation | null>(null)
@@ -201,9 +204,14 @@ export function OpportunityChat({
       onPhase: (phase) => setVoiceState(phase === 'ended' ? 'idle' : phase),
       onQueuePosition: setQueuePosition,
       onTranscript: (text) => addVoiceMessage('user', text),
-      onAnswer: (text, sources, suggestions, actions) => addVoiceMessage('assistant', text, sources, suggestions, actions),
+      onToolStarted: setVoiceTool,
+      onAnswer: (text, sources, suggestions, actions) => {
+        setVoiceTool(null)
+        addVoiceMessage('assistant', text, sources, suggestions, actions)
+      },
       onError: setError,
       onEnded: (reason) => {
+        setVoiceTool(null)
         voiceRef.current = null
         setQueuePosition(null)
         if (reason) setError(reason)
@@ -275,7 +283,7 @@ export function OpportunityChat({
             <div ref={messagesEndRef} />
           </div>
 
-          {voiceState !== 'idle' && <VoiceStatus t={t} state={voiceState} seconds={voiceSeconds} queuePosition={queuePosition} onAction={handleMicClick} onEnd={() => voiceRef.current?.end()} />}
+          {voiceState !== 'idle' && <VoiceStatus t={t} state={voiceState} seconds={voiceSeconds} queuePosition={queuePosition} tool={voiceTool} onAction={handleMicClick} onEnd={() => voiceRef.current?.end()} />}
           <form onSubmit={handleSubmit} className="shrink-0 border-t border-(--assistant-primary)/10 bg-(--assistant-background) p-3 sm:p-4">
             <div className="flex items-center gap-2 rounded-2xl border border-(--assistant-primary)/15 bg-white px-2 py-2 shadow-sm focus-within:border-(--assistant-primary)/40 focus-within:ring-2 focus-within:ring-(--assistant-focus)/40">
               <input
@@ -441,10 +449,11 @@ function SourceReferences({ t, sources }: { t: Messages; sources: SourceReferenc
       <div className="space-y-1.5">
         {sources.map((source) => (
           <a key={source.id} href={source.url ?? '#'} target={source.url ? '_blank' : undefined} rel="noreferrer" className="flex items-center gap-2 text-xs text-(--assistant-primary) hover:underline">
-            <FileText className="size-3.5 text-(--assistant-accent)" />
+            {source.kind === 'web' ? <Globe className="size-3.5 text-(--assistant-accent)" /> : <FileText className="size-3.5 text-(--assistant-accent)" />}
             <span dir="auto">
               {source.title}
               {source.section && <span className="text-(--assistant-muted)"> · {source.section}</span>}
+              {source.kind === 'web' && <span className="text-(--assistant-muted)"> · {t.webSource}</span>}
             </span>
           </a>
         ))}
@@ -571,13 +580,13 @@ function ErrorMessage({ t, message, onRetry }: { t: Messages; message: string; o
   )
 }
 
-function VoiceStatus({ t, state, seconds, queuePosition, onAction, onEnd }: { t: Messages; state: Exclude<VoiceState, 'idle'>; seconds: number; queuePosition: number | null; onAction: () => void; onEnd: () => void }) {
+function VoiceStatus({ t, state, seconds, queuePosition, tool, onAction, onEnd }: { t: Messages; state: Exclude<VoiceState, 'idle'>; seconds: number; queuePosition: number | null; tool: string | null; onAction: () => void; onEnd: () => void }) {
   const labels: Record<Exclude<VoiceState, 'idle'>, string> = {
     connecting: t.voice.connecting,
     queued: t.voice.queued(queuePosition),
     ready: t.voice.ready,
     recording: t.voice.recording,
-    processing: t.voice.processing,
+    processing: tool === 'web_search' ? t.voice.searchingWeb : t.voice.processing,
     speaking: t.voice.speaking,
   }
   const busy = state === 'connecting' || state === 'queued' || state === 'processing'
