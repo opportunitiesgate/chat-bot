@@ -18,6 +18,7 @@ export function toSourceReference(source: RagSource, index: number): SourceRefer
     title,
     section: text('section'),
     url: text('url'),
+    ...(metadata.type === 'web' ? { kind: 'web' as const } : {}),
   }
 }
 

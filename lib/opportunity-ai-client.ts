@@ -7,6 +7,8 @@ export interface SourceReference {
   title: string
   section?: string
   url?: string
+  /** "web": a page of the organizer's website found by web search, not OpportunitiesGate data. */
+  kind?: 'web'
 }
 
 /** Another opportunity the RAG server suggests; opening it navigates the host page. */

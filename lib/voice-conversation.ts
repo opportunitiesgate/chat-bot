@@ -11,6 +11,8 @@ export interface VoiceHandlers {
   onPhase(phase: VoicePhase): void
   onQueuePosition(position: number): void
   onTranscript(text: string): void
+  /** The RAG server started a tool (e.g. "web_search"): the answer will take a little longer. */
+  onToolStarted(tool: string): void
   // Actions (e.g. a drafted message to the team) are confirmed with a button, never by voice.
   onAnswer(text: string, sources: SourceReference[], suggestions: OpportunitySuggestion[], actions: ContactAction[]): void
   /** A translatable error key; turn-level errors leave the session usable. */
@@ -156,6 +158,11 @@ export class VoiceConversation {
       case 'transcript.final':
         if (typeof event.text === 'string') this.handlers.onTranscript(event.text)
         break
+      case 'tool.started':
+        if (typeof event.tool === 'string') this.handlers.onToolStarted(event.tool)
+        // The spoken filler line ("Let me check the organizer's website."), if a voice exists.
+        if (typeof event.audio === 'string' && !this.muted) this.enqueueClip(base64ToArrayBuffer(event.audio), () => {})
+        break
       case 'response.completed':
         if (typeof event.text === 'string') {
           this.handlers.onAnswer(
@@ -193,8 +200,16 @@ export class VoiceConversation {
     }
     if (!context) return
     this.setPhase('speaking')
-    const bytes = base64ToArrayBuffer(base64)
-    // Decode in arrival order and schedule each sentence right after the previous one.
+    this.enqueueClip(base64ToArrayBuffer(base64), () => {
+      if (final && this.phase === 'speaking') this.setPhase('ready')
+    })
+  }
+
+  /** Decode in arrival order and schedule each clip right after the previous one; `onDone` runs
+   * when it has played or failed. Does not change the phase (the filler plays while processing). */
+  private enqueueClip(bytes: ArrayBuffer, onDone: () => void): void {
+    const context = this.audioContext
+    if (!context) return
     this.playChain = this.playChain
       .then(async () => {
         const buffer = await context.decodeAudioData(bytes)
@@ -208,12 +223,10 @@ export class VoiceConversation {
         this.playing.add(source)
         source.onended = () => {
           this.playing.delete(source)
-          if (final && this.phase === 'speaking') this.setPhase('ready')
+          onDone()
         }
       })
-      .catch(() => {
-        if (final && this.phase === 'speaking') this.setPhase('ready')
-      })
+      .catch(onDone)
   }
 
   private enqueueSend(build: () => Promise<Record<string, unknown>>): void {
