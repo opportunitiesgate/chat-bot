@@ -2,13 +2,17 @@ import type { ErrorKey, Locale } from '@/lib/i18n'
 import { type HistoryEntry, OPENING_MESSAGE_ID } from '@/lib/chat-history'
 import { VoiceConversation, type VoiceHandlers } from '@/lib/voice-conversation'
 
+export type SourceKind = 'page' | 'organization' | 'web'
+
 export interface SourceReference {
   id: string
   title: string
   section?: string
   url?: string
-  /** "web": a page of the organizer's website found by web search, not OpportunitiesGate data. */
-  kind?: 'web'
+  /** Where the source comes from, when it is not OpportunitiesGate's stored opportunity text:
+   * "page" a page the opportunity links to (apply page, organizer's website), "organization" the
+   * organization's OpportunitiesGate record, "web" a web search result. */
+  kind?: SourceKind
 }
 
 /** Another opportunity the RAG server suggests; opening it navigates the host page. */

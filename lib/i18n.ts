@@ -52,6 +52,8 @@ export interface Messages {
   thinking: string
   sources: string
   webSource: string
+  pageSource: string
+  organizationSource: string
   relatedOpportunities: string
   inputPlaceholder: string
   askQuestion: string
@@ -72,6 +74,8 @@ export interface Messages {
     processing: string
     speaking: string
     searchingWeb: string
+    readingPage: string
+    lookingUpOrganization: string
     skip: string
     end: string
   }
@@ -108,7 +112,9 @@ const en: Messages = {
   ],
   thinking: 'Thinking through the opportunity',
   sources: 'Sources',
-  webSource: 'Organizer’s website',
+  webSource: 'Web search',
+  pageSource: 'Organizer’s page',
+  organizationSource: 'OpportunitiesGate record',
   relatedOpportunities: 'Related opportunities',
   inputPlaceholder: 'Ask about this opportunity...',
   askQuestion: 'Ask a question',
@@ -130,7 +136,9 @@ const en: Messages = {
     recording: 'Listening... tap the microphone to send.',
     processing: 'Thinking about your question...',
     speaking: 'Assistant is speaking... tap to skip.',
-    searchingWeb: 'Checking the organizer’s website...',
+    searchingWeb: 'Searching the web...',
+    readingPage: 'Reading the opportunity’s page...',
+    lookingUpOrganization: 'Looking up the organization...',
     skip: 'Skip spoken answer',
     end: 'End voice conversation',
   },
@@ -189,7 +197,9 @@ const fr: Messages = {
   ],
   thinking: 'Analyse de l’opportunité en cours',
   sources: 'Sources',
-  webSource: 'Site de l’organisateur',
+  webSource: 'Recherche web',
+  pageSource: 'Page de l’organisateur',
+  organizationSource: 'Fiche OpportunitiesGate',
   relatedOpportunities: 'Opportunités similaires',
   inputPlaceholder: 'Posez une question sur cette opportunité...',
   askQuestion: 'Poser une question',
@@ -213,7 +223,9 @@ const fr: Messages = {
     recording: 'Écoute en cours... touchez le micro pour envoyer.',
     processing: 'Réflexion sur votre question...',
     speaking: 'L’assistant parle... touchez pour passer.',
-    searchingWeb: 'Vérification du site de l’organisateur...',
+    searchingWeb: 'Recherche sur le web...',
+    readingPage: 'Lecture de la page de l’opportunité...',
+    lookingUpOrganization: 'Recherche d’informations sur l’organisation...',
     skip: 'Passer la réponse orale',
     end: 'Terminer la conversation vocale',
   },
@@ -272,7 +284,9 @@ const ar: Messages = {
   ],
   thinking: 'جارٍ تحليل الفرصة',
   sources: 'المصادر',
-  webSource: 'موقع الجهة المنظمة',
+  webSource: 'بحث على الويب',
+  pageSource: 'صفحة الجهة المنظمة',
+  organizationSource: 'سجل OpportunitiesGate',
   relatedOpportunities: 'فرص مشابهة',
   inputPlaceholder: 'اسأل عن هذه الفرصة...',
   askQuestion: 'اطرح سؤالًا',
@@ -294,7 +308,9 @@ const ar: Messages = {
     recording: 'جارٍ الاستماع... اضغط على الميكروفون للإرسال.',
     processing: 'جارٍ التفكير في سؤالك...',
     speaking: 'المساعد يتحدث... اضغط للتخطي.',
-    searchingWeb: 'جارٍ التحقق من موقع الجهة المنظمة...',
+    searchingWeb: 'جارٍ البحث على الويب...',
+    readingPage: 'جارٍ قراءة صفحة الفرصة...',
+    lookingUpOrganization: 'جارٍ البحث عن الجهة المنظمة...',
     skip: 'تخطي الإجابة الصوتية',
     end: 'إنهاء المحادثة الصوتية',
   },

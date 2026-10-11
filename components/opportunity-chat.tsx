@@ -8,6 +8,7 @@ import {
   Check,
   ChevronRight,
   CircleStop,
+  Building2,
   FileText,
   Globe,
   HelpCircle,
@@ -35,6 +36,7 @@ import {
   type ContactAction,
   type OpportunitySuggestion,
   opportunityPageUrl,
+  type SourceKind,
   type SourceReference,
 } from '@/lib/opportunity-ai-client'
 import type { VoiceConversation, VoicePhase } from '@/lib/voice-conversation'
@@ -449,11 +451,11 @@ function SourceReferences({ t, sources }: { t: Messages; sources: SourceReferenc
       <div className="space-y-1.5">
         {sources.map((source) => (
           <a key={source.id} href={source.url ?? '#'} target={source.url ? '_blank' : undefined} rel="noreferrer" className="flex items-center gap-2 text-xs text-(--assistant-primary) hover:underline">
-            {source.kind === 'web' ? <Globe className="size-3.5 text-(--assistant-accent)" /> : <FileText className="size-3.5 text-(--assistant-accent)" />}
+            <SourceIcon kind={source.kind} />
             <span dir="auto">
               {source.title}
               {source.section && <span className="text-(--assistant-muted)"> · {source.section}</span>}
-              {source.kind === 'web' && <span className="text-(--assistant-muted)"> · {t.webSource}</span>}
+              {source.kind && <span className="text-(--assistant-muted)"> · {sourceLabel(t, source.kind)}</span>}
             </span>
           </a>
         ))}
@@ -552,6 +554,24 @@ function SuggestionCards({
   )
 }
 
+// Voice status while a gateway tool runs (from the tool.started event).
+const TOOL_STATUS: Record<string, (t: Messages) => string> = {
+  opportunity_pages: (t) => t.voice.readingPage,
+  organisation_lookup: (t) => t.voice.lookingUpOrganization,
+  web_search: (t) => t.voice.searchingWeb,
+}
+
+function sourceLabel(t: Messages, kind: SourceKind): string {
+  return kind === 'page' ? t.pageSource : kind === 'organization' ? t.organizationSource : t.webSource
+}
+
+function SourceIcon({ kind }: { kind?: SourceKind }) {
+  const className = 'size-3.5 text-(--assistant-accent)'
+  if (kind === 'web') return <Globe className={className} />
+  if (kind === 'organization') return <Building2 className={className} />
+  return <FileText className={className} />
+}
+
 function StreamingMessage({ t }: { t: Messages }) {
   return (
     <div className="flex gap-2.5">
@@ -586,7 +606,7 @@ function VoiceStatus({ t, state, seconds, queuePosition, tool, onAction, onEnd }
     queued: t.voice.queued(queuePosition),
     ready: t.voice.ready,
     recording: t.voice.recording,
-    processing: tool === 'web_search' ? t.voice.searchingWeb : t.voice.processing,
+    processing: (tool && TOOL_STATUS[tool]?.(t)) || t.voice.processing,
     speaking: t.voice.speaking,
   }
   const busy = state === 'connecting' || state === 'queued' || state === 'processing'
