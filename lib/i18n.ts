@@ -34,6 +34,10 @@ export type ErrorKey =
   | 'TTS_UNAVAILABLE'
   | 'UNAUTHORIZED'
   | 'TURN_IN_PROGRESS'
+  | 'contactExpired'
+  | 'contactLimit'
+  | 'contactNoEmail'
+  | 'contactFailed'
 
 export interface Messages {
   assistantName: string
@@ -68,6 +72,17 @@ export interface Messages {
     speaking: string
     skip: string
     end: string
+  }
+  /** The card for a message to the team drafted by the assistant. */
+  contact: {
+    subject: string
+    message: string
+    send: string
+    sending: string
+    cancel: string
+    cancelled: string
+    sent: string
+    note: string
   }
   errors: Record<ErrorKey, string>
 }
@@ -115,6 +130,16 @@ const en: Messages = {
     skip: 'Skip spoken answer',
     end: 'End voice conversation',
   },
+  contact: {
+    subject: 'Subject',
+    message: 'Message',
+    send: 'Send',
+    sending: 'Sending…',
+    cancel: 'Cancel',
+    cancelled: 'Not sent.',
+    sent: 'Your message was sent to the OpportunitiesGate team. They will reply to your email address.',
+    note: 'Sent from your account with your name and email. Nothing is sent until you press Send.',
+  },
   errors: {
     generic: 'I couldn’t retrieve an answer right now.',
     rateLimited: 'Too many questions in a short time. Please wait a moment and try again.',
@@ -134,6 +159,10 @@ const en: Messages = {
     TTS_UNAVAILABLE: 'The answer is shown above; spoken answers aren’t available in this language.',
     UNAUTHORIZED: 'The voice session could not be authorized. Please try again.',
     TURN_IN_PROGRESS: 'Please wait for the current answer before asking again.',
+    contactExpired: 'This draft has expired. Ask the assistant again to write a new one.',
+    contactLimit: 'You have sent several messages recently. Please try again later.',
+    contactNoEmail: 'Your account has no email address, so the team could not reply. Add one in your profile.',
+    contactFailed: 'Your message could not be sent right now. Please try again.',
   },
 }
 
@@ -182,6 +211,16 @@ const fr: Messages = {
     skip: 'Passer la réponse orale',
     end: 'Terminer la conversation vocale',
   },
+  contact: {
+    subject: 'Objet',
+    message: 'Message',
+    send: 'Envoyer',
+    sending: 'Envoi…',
+    cancel: 'Annuler',
+    cancelled: 'Non envoyé.',
+    sent: 'Votre message a été envoyé à l’équipe OpportunitiesGate. Elle vous répondra à votre adresse e-mail.',
+    note: 'Envoyé depuis votre compte avec votre nom et votre e-mail. Rien n’est envoyé avant que vous appuyiez sur Envoyer.',
+  },
   errors: {
     generic: 'Je n’ai pas pu obtenir de réponse pour le moment.',
     rateLimited: 'Trop de questions en peu de temps. Patientez un instant puis réessayez.',
@@ -201,6 +240,10 @@ const fr: Messages = {
     TTS_UNAVAILABLE: 'La réponse est affichée ci-dessus ; la lecture à voix haute n’est pas disponible dans cette langue.',
     UNAUTHORIZED: 'La session vocale n’a pas pu être autorisée. Veuillez réessayer.',
     TURN_IN_PROGRESS: 'Attendez la fin de la réponse en cours avant de poser une autre question.',
+    contactExpired: 'Ce brouillon a expiré. Demandez à nouveau à l’assistant d’en rédiger un.',
+    contactLimit: 'Vous avez envoyé plusieurs messages récemment. Réessayez plus tard.',
+    contactNoEmail: 'Votre compte n’a pas d’adresse e-mail, l’équipe ne pourrait pas vous répondre. Ajoutez-en une dans votre profil.',
+    contactFailed: 'Votre message n’a pas pu être envoyé pour le moment. Réessayez.',
   },
 }
 
@@ -247,6 +290,16 @@ const ar: Messages = {
     skip: 'تخطي الإجابة الصوتية',
     end: 'إنهاء المحادثة الصوتية',
   },
+  contact: {
+    subject: 'الموضوع',
+    message: 'الرسالة',
+    send: 'إرسال',
+    sending: 'جارٍ الإرسال…',
+    cancel: 'إلغاء',
+    cancelled: 'لم تُرسل.',
+    sent: 'أُرسلت رسالتك إلى فريق OpportunitiesGate. سيرد الفريق على بريدك الإلكتروني.',
+    note: 'تُرسل من حسابك باسمك وبريدك الإلكتروني. لن يُرسل شيء قبل أن تضغط على إرسال.',
+  },
   errors: {
     generic: 'تعذر الحصول على إجابة الآن.',
     rateLimited: 'أسئلة كثيرة في وقت قصير. يرجى الانتظار قليلًا ثم المحاولة مجددًا.',
@@ -266,6 +319,10 @@ const ar: Messages = {
     TTS_UNAVAILABLE: 'الإجابة معروضة أعلاه؛ الإجابات الصوتية غير متاحة بهذه اللغة.',
     UNAUTHORIZED: 'تعذر التحقق من الجلسة الصوتية. يرجى المحاولة مجددًا.',
     TURN_IN_PROGRESS: 'يرجى انتظار انتهاء الإجابة الحالية قبل طرح سؤال جديد.',
+    contactExpired: 'انتهت صلاحية هذه المسودة. اطلب من المساعد كتابة مسودة جديدة.',
+    contactLimit: 'لقد أرسلت عدة رسائل مؤخرا. يرجى المحاولة لاحقا.',
+    contactNoEmail: 'لا يحتوي حسابك على بريد إلكتروني، لذلك لا يمكن للفريق الرد عليك. أضف بريدا في ملفك الشخصي.',
+    contactFailed: 'تعذر إرسال رسالتك الآن. يرجى المحاولة مرة أخرى.',
   },
 }
 

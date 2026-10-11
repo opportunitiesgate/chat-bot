@@ -1,6 +1,6 @@
 import type { ErrorKey, Locale } from '@/lib/i18n'
-import type { OpportunitySuggestion, SourceReference } from '@/lib/opportunity-ai-client'
-import { toSourceReferences, toSuggestions } from '@/lib/rag-sources'
+import type { ContactAction, OpportunitySuggestion, SourceReference } from '@/lib/opportunity-ai-client'
+import { toContactActions, toSourceReferences, toSuggestions } from '@/lib/rag-sources'
 
 // One click-to-talk voice session with the rag-getway /ws/voice WebSocket:
 // microphone → MediaRecorder chunks → audio.commit → transcript + answer + spoken WAV sentences.
@@ -11,7 +11,8 @@ export interface VoiceHandlers {
   onPhase(phase: VoicePhase): void
   onQueuePosition(position: number): void
   onTranscript(text: string): void
-  onAnswer(text: string, sources: SourceReference[], suggestions: OpportunitySuggestion[]): void
+  // Actions (e.g. a drafted message to the team) are confirmed with a button, never by voice.
+  onAnswer(text: string, sources: SourceReference[], suggestions: OpportunitySuggestion[], actions: ContactAction[]): void
   /** A translatable error key; turn-level errors leave the session usable. */
   onError(error: ErrorKey): void
   onEnded(reason?: ErrorKey): void
@@ -157,7 +158,12 @@ export class VoiceConversation {
         break
       case 'response.completed':
         if (typeof event.text === 'string') {
-          this.handlers.onAnswer(event.text, toSourceReferences(event.sources), toSuggestions(event.suggestions))
+          this.handlers.onAnswer(
+            event.text,
+            toSourceReferences(event.sources),
+            toSuggestions(event.suggestions),
+            toContactActions(event.actions),
+          )
         }
         break
       case 'audio.chunk':

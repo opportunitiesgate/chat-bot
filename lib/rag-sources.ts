@@ -1,4 +1,4 @@
-import type { OpportunitySuggestion, SourceReference } from '@/lib/opportunity-ai-client'
+import type { ContactAction, OpportunitySuggestion, SourceReference } from '@/lib/opportunity-ai-client'
 
 // A source as returned by the rag-getway backend (POST /v1/opportunity/chat and the voice WebSocket).
 export interface RagSource {
@@ -49,4 +49,28 @@ export function toSuggestions(value: unknown): OpportunitySuggestion[] {
     )
     .slice(0, MAX_SUGGESTIONS)
     .map(({ opportunityId, title, slug }) => ({ opportunityId, title: title.trim(), slug }))
+}
+
+const text = (value: unknown): value is string => typeof value === 'string' && value.trim() !== ''
+
+/** Messages to the team drafted by the RAG server (chat and voice), validated; anything else is dropped. */
+export function toContactActions(value: unknown): ContactAction[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item): ContactAction[] => {
+    if (!item || typeof item !== 'object' || item.type !== 'send_contact_message') return []
+    const { id, label, token, expiresAt, preview } = item as Record<string, unknown>
+    const { subject, message, language } = (preview && typeof preview === 'object' ? preview : {}) as Record<string, unknown>
+    if (!text(id) || !text(label) || !text(token) || !text(expiresAt) || !text(message)) return []
+    return [
+      {
+        id,
+        label,
+        token,
+        expiresAt,
+        subject: text(subject) ? subject : '',
+        message,
+        language: text(language) ? language : 'en',
+      },
+    ]
+  })
 }
