@@ -3,7 +3,7 @@ import { parseHistory } from '@/lib/chat-history'
 import { siteClaimsFromRequest } from '@/lib/embed-token'
 import { gatewayErrorMessage, isRagChatResponse, toAssistantMessage } from '@/lib/rag-response'
 
-// A site-wide assistant (e.g. legal): POST /v1/<assistant>/chat on the gateway. Only viewers of a
+// A site-wide assistant (e.g. site): POST /v1/<assistant>/chat on the gateway. Only viewers of a
 // page of the OpportunitiesGate site (site token, signed-in or guest) can ask it.
 const AI_TIMEOUT_MS = 180_000
 

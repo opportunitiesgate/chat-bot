@@ -54,6 +54,7 @@ export interface Messages {
   webSource: string
   pageSource: string
   organizationSource: string
+  siteSource: string
   relatedOpportunities: string
   inputPlaceholder: string
   askQuestion: string
@@ -115,6 +116,7 @@ const en: Messages = {
   webSource: 'Web search',
   pageSource: 'Organizer’s page',
   organizationSource: 'OpportunitiesGate record',
+  siteSource: 'OpportunitiesGate page',
   relatedOpportunities: 'Related opportunities',
   inputPlaceholder: 'Ask about this opportunity...',
   askQuestion: 'Ask a question',
@@ -200,6 +202,7 @@ const fr: Messages = {
   webSource: 'Recherche web',
   pageSource: 'Page de l’organisateur',
   organizationSource: 'Fiche OpportunitiesGate',
+  siteSource: 'Page OpportunitiesGate',
   relatedOpportunities: 'Opportunités similaires',
   inputPlaceholder: 'Posez une question sur cette opportunité...',
   askQuestion: 'Poser une question',
@@ -287,6 +290,7 @@ const ar: Messages = {
   webSource: 'بحث على الويب',
   pageSource: 'صفحة الجهة المنظمة',
   organizationSource: 'سجل OpportunitiesGate',
+  siteSource: 'صفحة OpportunitiesGate',
   relatedOpportunities: 'فرص مشابهة',
   inputPlaceholder: 'اسأل عن هذه الفرصة...',
   askQuestion: 'اطرح سؤالًا',
@@ -352,62 +356,63 @@ const ar: Messages = {
 
 export const MESSAGES: Record<Locale, Messages> = { en, fr, ar }
 
-// Texts of the site-wide legal assistant: the opportunity texts it replaces, per language.
-const LEGAL_TEXTS: Record<Locale, Partial<Messages>> = {
+// Texts of the site-wide assistant (about OpportunitiesGate: what it is, contact, terms, privacy),
+// the opportunity texts it replaces, per language.
+const SITE_TEXTS: Record<Locale, Partial<Messages>> = {
   en: {
     assistantName: 'OpportunitiesGate Assistant',
-    thisOpportunity: 'our legal pages',
+    thisOpportunity: 'OpportunitiesGate',
     currentOpportunity: 'Topic',
-    exploreOpportunity: 'Ask about our legal pages',
+    exploreOpportunity: 'Ask about OpportunitiesGate',
     suggestions: [
-      'How is my personal data used?',
-      'Can I delete my account and data?',
-      'What do the terms of use say about payments?',
-      'Which cookies do you use?',
+      'What is OpportunitiesGate?',
+      'How can I contact the team?',
+      'Do you sell my data?',
+      'Do plans renew automatically?',
     ],
-    thinking: 'Checking our legal pages',
-    inputPlaceholder: 'Ask about terms, privacy or cookies...',
-    footer: 'Answers are based on OpportunitiesGate’s legal pages, not legal advice',
+    thinking: 'Checking our pages',
+    inputPlaceholder: 'Ask about OpportunitiesGate, contact, privacy...',
+    footer: 'Answers are based on OpportunitiesGate’s own pages, not legal advice',
     opening:
-      'Hello. I can help you understand OpportunitiesGate’s terms of use, privacy policy and cookie policy. What would you like to know?',
+      'Hello. I can answer your questions about OpportunitiesGate: what we offer, how to contact the team, and our terms and privacy policy. What would you like to know?',
   },
   fr: {
     assistantName: 'Assistant OpportunitiesGate',
-    thisOpportunity: 'nos pages légales',
+    thisOpportunity: 'OpportunitiesGate',
     currentOpportunity: 'Sujet',
-    exploreOpportunity: 'Questions sur nos pages légales',
+    exploreOpportunity: 'Questions sur OpportunitiesGate',
     suggestions: [
-      'Comment mes données personnelles sont-elles utilisées ?',
-      'Puis-je supprimer mon compte et mes données ?',
-      'Que disent les conditions d’utilisation sur les paiements ?',
-      'Quels cookies utilisez-vous ?',
+      'Qu’est-ce qu’OpportunitiesGate ?',
+      'Comment contacter l’équipe ?',
+      'Vendez-vous mes données ?',
+      'Les abonnements se renouvellent-ils automatiquement ?',
     ],
-    thinking: 'Consultation de nos pages légales',
-    inputPlaceholder: 'Posez une question sur les conditions, la confidentialité ou les cookies...',
-    footer: 'Réponses fondées sur les pages légales d’OpportunitiesGate, pas un conseil juridique',
+    thinking: 'Consultation de nos pages',
+    inputPlaceholder: 'Posez une question sur OpportunitiesGate, le contact, la confidentialité...',
+    footer: 'Réponses fondées sur les pages d’OpportunitiesGate, pas un conseil juridique',
     opening:
-      'Bonjour. Je peux vous aider à comprendre les conditions d’utilisation, la politique de confidentialité et la politique de cookies d’OpportunitiesGate. Que souhaitez-vous savoir ?',
+      'Bonjour. Je peux répondre à vos questions sur OpportunitiesGate : ce que nous proposons, comment contacter l’équipe, nos conditions et notre politique de confidentialité. Que souhaitez-vous savoir ?',
   },
   ar: {
     assistantName: 'مساعد OpportunitiesGate',
-    thisOpportunity: 'صفحاتنا القانونية',
+    thisOpportunity: 'OpportunitiesGate',
     currentOpportunity: 'الموضوع',
-    exploreOpportunity: 'اسأل عن صفحاتنا القانونية',
+    exploreOpportunity: 'اسأل عن OpportunitiesGate',
     suggestions: [
-      'كيف تُستخدم بياناتي الشخصية؟',
-      'هل يمكنني حذف حسابي وبياناتي؟',
-      'ماذا تقول شروط الاستخدام عن المدفوعات؟',
-      'ما ملفات تعريف الارتباط التي تستخدمونها؟',
+      'ما هي OpportunitiesGate؟',
+      'كيف يمكنني التواصل مع الفريق؟',
+      'هل تبيعون بياناتي؟',
+      'هل تتجدد الباقات تلقائيا؟',
     ],
-    thinking: 'جارٍ مراجعة صفحاتنا القانونية',
-    inputPlaceholder: 'اسأل عن الشروط أو الخصوصية أو ملفات تعريف الارتباط...',
-    footer: 'الإجابات مبنية على الصفحات القانونية لـ OpportunitiesGate وليست استشارة قانونية',
+    thinking: 'جارٍ مراجعة صفحاتنا',
+    inputPlaceholder: 'اسأل عن OpportunitiesGate أو التواصل أو الخصوصية...',
+    footer: 'الإجابات مبنية على صفحات OpportunitiesGate وليست استشارة قانونية',
     opening:
-      'مرحبا. يمكنني مساعدتك في فهم شروط الاستخدام وسياسة الخصوصية وسياسة ملفات تعريف الارتباط في OpportunitiesGate. ماذا تريد أن تعرف؟',
+      'مرحبا. يمكنني الإجابة عن أسئلتك حول OpportunitiesGate: ما نقدمه، وكيفية التواصل مع الفريق، وشروطنا وسياسة الخصوصية. ماذا تريد أن تعرف؟',
   },
 }
 
 /** The interface texts, with a site assistant's own texts when it is not the opportunity assistant. */
-export function messagesFor(locale: Locale, siteAssistant?: 'legal'): Messages {
-  return siteAssistant === 'legal' ? { ...MESSAGES[locale], ...LEGAL_TEXTS[locale] } : MESSAGES[locale]
+export function messagesFor(locale: Locale, siteAssistant?: 'site'): Messages {
+  return siteAssistant === 'site' ? { ...MESSAGES[locale], ...SITE_TEXTS[locale] } : MESSAGES[locale]
 }

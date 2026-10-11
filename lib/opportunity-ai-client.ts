@@ -2,7 +2,7 @@ import type { ErrorKey, Locale } from '@/lib/i18n'
 import { type HistoryEntry, OPENING_MESSAGE_ID } from '@/lib/chat-history'
 import { VoiceConversation, type VoiceHandlers } from '@/lib/voice-conversation'
 
-export type SourceKind = 'page' | 'organization' | 'web'
+export type SourceKind = 'page' | 'organization' | 'web' | 'site'
 
 export interface SourceReference {
   id: string
@@ -11,7 +11,8 @@ export interface SourceReference {
   url?: string
   /** Where the source comes from, when it is not OpportunitiesGate's stored opportunity text:
    * "page" a page the opportunity links to (apply page, organizer's website), "organization" the
-   * organization's OpportunitiesGate record, "web" a web search result. */
+   * organization's OpportunitiesGate record, "web" a web search result, "site" one of
+   * OpportunitiesGate's own pages (about, contact, legal). */
   kind?: SourceKind
 }
 
@@ -73,7 +74,7 @@ export class ChatRequestError extends Error {
   }
 }
 
-/** `chatPath` replaces the opportunity chat route, e.g. /api/assistants/legal/chat for a site assistant. */
+/** `chatPath` replaces the opportunity chat route, e.g. /api/assistants/site/chat for a site assistant. */
 export function createOpportunityAiClient(
   socketUrl: string,
   embedToken?: string,

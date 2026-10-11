@@ -3,7 +3,7 @@ import { EmbeddedAssistant, EmbedUnavailable } from '@/components/embedded-assis
 import { parseEmbedOptions, themeStyle } from '@/lib/embed-options'
 import { embedAllowedOrigins, verifySiteToken } from '@/lib/embed-token'
 
-// A site-wide assistant (e.g. /embed/assistant/legal), framed on the OpportunitiesGate site's public
+// A site-wide assistant (e.g. /embed/assistant/site), framed on the OpportunitiesGate site's public
 // pages. Same look options and host messages as the opportunity embed; a site token instead of an
 // opportunity token.
 export const viewport: Viewport = { colorScheme: 'light' }

@@ -22,7 +22,7 @@ export function toSourceReference(source: RagSource, index: number): SourceRefer
   }
 }
 
-const SOURCE_KINDS: readonly string[] = ['page', 'organization', 'web']
+const SOURCE_KINDS: readonly string[] = ['page', 'organization', 'web', 'site']
 
 function isSourceKind(value: unknown): value is SourceKind {
   return typeof value === 'string' && SOURCE_KINDS.includes(value)

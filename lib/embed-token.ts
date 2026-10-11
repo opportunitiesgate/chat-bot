@@ -68,7 +68,7 @@ function optionalText(value: unknown): string | undefined {
 // Site-wide assistants, framed on every public page (except opportunity pages). Their token,
 // signed by the OpportunitiesGate site with the same secret, is { ast, sub, exp }: it names the
 // assistant and has no "opp", so an opportunity token never opens a site assistant and vice versa.
-export const SITE_ASSISTANTS = ['legal'] as const
+export const SITE_ASSISTANTS = ['site'] as const
 export type SiteAssistant = (typeof SITE_ASSISTANTS)[number]
 
 export interface SiteClaims {
