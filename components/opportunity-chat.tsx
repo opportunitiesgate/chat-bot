@@ -63,7 +63,7 @@ export interface OpportunityChatProps {
   logoUrl?: string
   /** CSS custom properties overriding the default palette (see lib/embed-options.ts). */
   themeStyle?: CSSProperties
-  /** A site-wide assistant (e.g. legal) instead of the opportunity one: its own texts and chat route, no voice. */
+  /** A site-wide assistant (e.g. site) instead of the opportunity one: its own texts and chat route, no voice. */
   siteAssistant?: SiteAssistant
 }
 
@@ -572,13 +572,14 @@ const TOOL_STATUS: Record<string, (t: Messages) => string> = {
 }
 
 function sourceLabel(t: Messages, kind: SourceKind): string {
+  if (kind === 'site') return t.siteSource
   return kind === 'page' ? t.pageSource : kind === 'organization' ? t.organizationSource : t.webSource
 }
 
 function SourceIcon({ kind }: { kind?: SourceKind }) {
   const className = 'size-3.5 text-(--assistant-accent)'
   if (kind === 'web') return <Globe className={className} />
-  if (kind === 'organization') return <Building2 className={className} />
+  if (kind === 'organization' || kind === 'site') return <Building2 className={className} />
   return <FileText className={className} />
 }
 
